@@ -30,6 +30,20 @@ const preparationPhotos: Record<string, string> = {
   MUTTON: "mutton",
   DUCK: "duck",
 };
+const preparationSheets = {
+  vegetables: ["VEG-ONION", "VEG-OKRA", "VEG-EGGPLANT", "VEG-GOURD", "VEG-SPINACH", "CAULIFLOWER"],
+  produce: ["CABBAGE", "TOMATO", "CUCUMBER", "CARROT", "PUMPKIN", "BITTER-GOURD"],
+  seafood: ["FISH-HILSA", "FISH-KATLA", "FISH-TILAPIA", "FISH-PANGAS", "FISH-KOI", "PABDA"],
+  garden: ["POINTED-GOURD", "RIDGE-GOURD", "BEANS", "LONG-BEANS", "RADISH", "CHILLI"],
+  herbs: ["GINGER", "GARLIC", "CORIANDER", "RED-SPINACH", "MALABAR", "TARO"],
+  seasonal: ["DRUMSTICK", "AMARANTH", "SNAKE-GOURD", "RAW-PAPAYA", "LEMON", "JUJUBE"],
+  fruit: ["MANGO", "BANANA", "GUAVA", "PAPAYA", "PINEAPPLE", "WATERMELON"],
+  special: ["JACKFRUIT", "LYCHEE", "COCONUT", "MOLA"],
+} as const;
+const preparationTiles = new Map<string, { sheet: string; row: number; rows: number }>(
+  Object.entries(preparationSheets).flatMap(([sheet, items]) => items.map((sku, row) => [sku, { sheet, row, rows: items.length }] as const)),
+);
+const preparationColumns = { cleaned: 0, "cut-only": 1, cut: 2 } as const;
 const asSoldOnly = new Set(["EGGS", "PRAWNS", "BEEF-MINCE", "DRUMSTICKS", "JACKFRUIT-PODS"]);
 
 export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
@@ -95,8 +109,13 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
         const prep = options ? choices[p.sku] ?? "whole" : "whole";
         const example = preparationPhotos[p.sku];
         const illustration = prep !== "whole" && example ? "/preparation/" + example + "-" + prep + ".webp" : undefined;
+        const tile = prep !== "whole" ? preparationTiles.get(p.sku) : undefined;
+        const source = illustration ?? (photo ? "/products/" + photo + ".webp" : undefined);
+        const imageLabel = illustration || tile ? name(p) + " · " + prepName(prep) : name(p);
         return <article key={p.sku}>
-          {photo && <img className="product-photo" src={"/products/" + photo + ".webp"} alt={name(p)} width={280} height={280} loading="lazy" />}
+          {tile && prep !== "whole" ? <div className="product-photo preparation-tile" role="img" aria-label={imageLabel}
+            style={{ backgroundImage: "url(/preparation/sheet-" + tile.sheet + ".webp)", backgroundSize: "300% " + tile.rows * 100 + "%", backgroundPosition: preparationColumns[prep] * 50 + "% " + tile.row * 100 / (tile.rows - 1) + "%" }} />
+            : source && <img className="product-photo" src={source} alt={imageLabel} width={280} height={280} loading="lazy" />}
           {group && <p className="product-department">{departments[group][bn ? 1 : 0]}</p>}
           <h3>{name(p)}</h3><p>{money(Number(p.price_bdt))} / {unit(p)}</p>
           <form onSubmit={e => { e.preventDefault(); add(p, prep); }}>
@@ -108,10 +127,8 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
             </select></label>}
             {options && <div className="preparation-note" aria-live="polite">{descriptions[prep][bn ? 1 : 0]}
               {prep !== "whole" && Number(p.processing_fee_bdt) > 0 && <small>{t("Preparation fee", "প্রস্তুতি ফি")} +{money(Number(p.processing_fee_bdt))}/{unit(p)}</small>}
-              {illustration && <figure className="preparation-preview">
-                <img src={illustration} alt={name(p) + " · " + prepName(prep)} width={96} height={96} loading="lazy" />
-                <figcaption>{t("Preparation illustration", "প্রস্তুতির নমুনা ছবি")}</figcaption>
-              </figure>}
+              {(illustration || tile) && <small>{t("Preparation illustration", "প্রস্তুতির নমুনা ছবি")}</small>}
+              {prep !== "whole" && !illustration && !tile && <small>{t("Preparation photo unavailable.", "প্রস্তুতির ছবি নেই।")}</small>}
             </div>}
             <button className="primary" type="submit" disabled={remaining <= 0}>{remaining > 0 ? t("Add to basket", "ঝুড়িতে যোগ করুন") : t("Stock limit reached", "স্টকের সীমা পূর্ণ")}</button>
           </form>
