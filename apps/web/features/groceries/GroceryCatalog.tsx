@@ -22,7 +22,14 @@ const descriptions = {
   "cut-only": ["Cut into pieces with no extra cleaning service.", "টুকরো করা হবে, অতিরিক্ত পরিষ্কার করার সেবা ছাড়া।"],
   cut: ["Cleaned first, then cut into pieces.", "আগে পরিষ্কার, তারপর টুকরো করা হবে।"],
 } as const;
-const exampleLabels = { fish: ["Example shown with Rohu fish.", "রুই মাছ দিয়ে দেখানো নমুনা।"], meat: ["Example shown with chicken.", "মুরগি দিয়ে দেখানো নমুনা।"], produce: ["Example shown with potatoes.", "আলু দিয়ে দেখানো নমুনা।"] } as const;
+const preparationPhotos: Record<string, string> = {
+  "VEG-POTATO": "produce",
+  "FISH-ROHU": "fish",
+  CHICKEN: "meat",
+  BEEF: "beef",
+  MUTTON: "mutton",
+  DUCK: "duck",
+};
 const asSoldOnly = new Set(["EGGS", "PRAWNS", "BEEF-MINCE", "DRUMSTICKS", "JACKFRUIT-PODS"]);
 
 export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
@@ -86,11 +93,10 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
         const group = p.department ?? catalogDetails.get(p.sku)?.department;
         const options = p.category === "fresh" && group && group !== "dairy" && !asSoldOnly.has(p.sku);
         const prep = options ? choices[p.sku] ?? "whole" : "whole";
-        const example = group === "fish" ? "fish" : group === "meat" ? "meat" : "produce";
-        const illustration = prep !== "whole" ? "/preparation/" + example + "-" + prep + ".webp" : undefined;
-        const displayImage = illustration ?? (photo ? "/products/" + photo + ".webp" : undefined);
+        const example = preparationPhotos[p.sku];
+        const illustration = prep !== "whole" && example ? "/preparation/" + example + "-" + prep + ".webp" : undefined;
         return <article key={p.sku}>
-          {displayImage && <img className="product-photo" src={displayImage} alt={illustration ? t("Illustrative preparation example", "প্রস্তুতির নমুনা ছবি") : name(p)} width={280} height={280} loading="lazy" />}
+          {photo && <img className="product-photo" src={"/products/" + photo + ".webp"} alt={name(p)} width={280} height={280} loading="lazy" />}
           {group && <p className="product-department">{departments[group][bn ? 1 : 0]}</p>}
           <h3>{name(p)}</h3><p>{money(Number(p.price_bdt))} / {unit(p)}</p>
           <form onSubmit={e => { e.preventDefault(); add(p, prep); }}>
@@ -98,10 +104,14 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
               const next = e.currentTarget.value as Prep;
               setChoices(prev => ({ ...prev, [p.sku]: next }));
             }}>
-              {(Object.keys(preparations) as Prep[]).map(v => <option value={v} key={v}>{prepName(v)}{v !== "whole" && Number(p.processing_fee_bdt) > 0 ? " +" + money(Number(p.processing_fee_bdt)) + "/" + unit(p) : ""}</option>)}
+              {(Object.keys(preparations) as Prep[]).map(v => <option value={v} key={v}>{prepName(v)}</option>)}
             </select></label>}
             {options && <div className="preparation-note" aria-live="polite">{descriptions[prep][bn ? 1 : 0]}
-              {illustration && <small>{exampleLabels[example][bn ? 1 : 0]}</small>}
+              {prep !== "whole" && Number(p.processing_fee_bdt) > 0 && <small>{t("Preparation fee", "প্রস্তুতি ফি")} +{money(Number(p.processing_fee_bdt))}/{unit(p)}</small>}
+              {illustration && <figure className="preparation-preview">
+                <img src={illustration} alt={name(p) + " · " + prepName(prep)} width={96} height={96} loading="lazy" />
+                <figcaption>{t("Preparation illustration", "প্রস্তুতির নমুনা ছবি")}</figcaption>
+              </figure>}
             </div>}
             <button className="primary" type="submit" disabled={remaining <= 0}>{remaining > 0 ? t("Add to basket", "ঝুড়িতে যোগ করুন") : t("Stock limit reached", "স্টকের সীমা পূর্ণ")}</button>
           </form>
