@@ -15,6 +15,7 @@
 ---
 
 > **Status: engineering foundation / development preview. NOT approved for live customer orders.**
+> Dedicated Google Cloud project created: `trippy-delivery-2026` (currently not billed or deployed). Cloudflare Pages remains unprovisioned; see the [deployment plan](docs/DEPLOYMENT.md).
 > The repository contains working domain API foundations and a web preview. Live maps/traffic, courier verification, payments, slot capacity, warehouse processes and operations controls are not yet integrated. Never claim the system is production-launched.
 
 ## Product vision
@@ -195,6 +196,7 @@ See [API contract](docs/API.md) for request examples and status codes.
 
 ## Documentation index
 
+- [Deployment: isolated Cloudflare and Google Cloud preview](docs/DEPLOYMENT.md)
 - [Architecture & module contracts](docs/ARCHITECTURE.md)
 - [Parcel logistics design](docs/PARCELS.md)
 - [Grocery fulfillment design](docs/GROCERIES.md)
