@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     jwt_issuer: str | None = None
     jwt_audience: str | None = None
     jwt_jwks_url: str | None = None
+    google_client_id: str | None = None
+    google_admin_email: str | None = None
     active_cities: str = "dhaka"
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -20,7 +22,7 @@ class Settings(BaseSettings):
     def validate_environment(self):
         if self.app_env in ("preview", "staging", "production") and self.allow_dev_auth:
             raise ValueError("Development auth is forbidden for hosted environments")
-        if self.app_env in ("staging", "production") and not all(
+        if self.app_env in ("staging", "production") and not self.google_client_id and not all(
             [self.jwt_issuer, self.jwt_audience, self.jwt_jwks_url]
         ):
             raise ValueError("JWT issuer, audience and JWKS URL are required")
