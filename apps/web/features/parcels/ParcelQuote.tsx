@@ -17,6 +17,10 @@ export function ParcelQuote() {
   const [width, setWidth] = useState("20");
   const [height, setHeight] = useState("10");
   const [category, setCategory] = useState("general");
+  const [senderLat, setSenderLat] = useState("23.82");
+  const [senderLng, setSenderLng] = useState("90.365");
+  const [recipientLat, setRecipientLat] = useState("23.745");
+  const [recipientLng, setRecipientLng] = useState("90.375");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -29,11 +33,11 @@ export function ParcelQuote() {
       const payload = {
         sender: {
           name: "Demo Sender", phone: "01700000000", address_line: "Mirpur 10, Dhaka",
-          city: "Dhaka", latitude: 23.82, longitude: 90.365,
+          city: "Dhaka", latitude: Number(senderLat), longitude: Number(senderLng),
         },
         recipient: {
           name: "Demo Recipient", phone: "01800000000", address_line: "Dhanmondi, Dhaka",
-          city: "Dhaka", latitude: 23.745, longitude: 90.375,
+          city: "Dhaka", latitude: Number(recipientLat), longitude: Number(recipientLng),
         },
         package: {
           category, weight_kg: Number(weight), length_cm: Number(length),
@@ -57,13 +61,17 @@ export function ParcelQuote() {
       <label>Length (cm)<input min="1" type="number" value={length} onChange={e => setLength(e.target.value)} /></label>
       <label>Width (cm)<input min="1" type="number" value={width} onChange={e => setWidth(e.target.value)} /></label>
       <label>Height (cm)<input min="1" type="number" value={height} onChange={e => setHeight(e.target.value)} /></label>
+      <label>Pickup latitude<input type="number" step="0.0001" value={senderLat} onChange={e => setSenderLat(e.target.value)} /></label>
+      <label>Pickup longitude<input type="number" step="0.0001" value={senderLng} onChange={e => setSenderLng(e.target.value)} /></label>
+      <label>Delivery latitude<input type="number" step="0.0001" value={recipientLat} onChange={e => setRecipientLat(e.target.value)} /></label>
+      <label>Delivery longitude<input type="number" step="0.0001" value={recipientLng} onChange={e => setRecipientLng(e.target.value)} /></label>
       <label>Parcel type<select value={category} onChange={e => setCategory(e.target.value)}>
         <option value="general">General parcel</option>
         <option value="document">Documents</option>
         <option value="fragile">Fragile</option>
       </select></label>
     </div>
-    <div className="demo-note">Sample route: Mirpur 10 → Dhanmondi, Dhaka. Live addresses and traffic integration are pending.</div>
+    <div className="demo-note">Sample Dhaka coordinates can be edited to explore estimates. Address autocomplete, verified road routing, traffic and partner availability remain future integrations.</div>
     <button className="primary-button" type="button" onClick={estimate} disabled={pending}>
       {pending ? "Calculating…" : "Estimate parcel charge"}
     </button>
