@@ -75,3 +75,17 @@ Use a separate PostgreSQL instance and restrict runtime access to the tables the
 This is a **read-only development preview**, not commercial delivery.
 Do not switch `APP_ENV` to production or enable payment/checkout until the
 [production readiness checklist](PRODUCTION_READINESS.md) is complete and signed off.
+
+### Google sign-in
+
+Create a Web application OAuth client in the dedicated TRIPPY Delivery Google
+Cloud project. Add the exact HTTPS origins serving the account page to its
+authorized JavaScript origins. Configure the same client ID as
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` in the Pages build and `GOOGLE_CLIENT_ID` on
+Cloud Run. Set `GOOGLE_ADMIN_EMAIL` only on Cloud Run to the approved owner's
+Google email. Leave it unset until the owner is confirmed for that environment.
+
+Check that an ordinary Google account can view its profile but receives HTTP
+403 from `GET /api/v1/admin/session`. Check that the approved owner receives
+HTTP 200 and sees the Admin link. The current admin workspace operates on
+sample records. The preview write guard continues to disable live bookings.

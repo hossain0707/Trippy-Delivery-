@@ -1,55 +1,32 @@
 "use client";
 import { useState } from "react";
-import { Brand } from "@/components/Brand";
-import { ParcelQuote } from "@/features/parcels/ParcelQuote";
-import { GroceryCatalog } from "@/features/groceries/GroceryCatalog";
+import { DeliveryBanner } from "@/components/DeliveryBanner";
 
 export default function Home() {
-  const [service, setService] = useState<"parcel" | "grocery">("parcel");
-  return <main>
-    <header className="site-header shell">
-      <Brand />
-      <nav aria-label="Main navigation"><a href="#services">Services</a><a href="#how">How it works</a>
+  const [bn, setBangla] = useState(false);
+  const t = (en: string, bangla: string) => bn ? bangla : en;
+  return <div lang={bn ? "bn" : "en"}>
+    <header className="site-header"><div className="wrap bar">
+      <a href="#" className="wordmark">TRIPPY<span> Delivery</span></a>
+      <nav aria-label={t("Main navigation", "প্রধান নেভিগেশন")}>
+        <a href="/parcels">{t("Parcels", "পার্সেল")}</a><a href="/groceries">{t("Groceries", "বাজার")}</a>
+        <a href="/account">{t("My account", "আমার অ্যাকাউন্ট")}</a>
+        <button type="button" onClick={() => setBangla(!bn)}>{bn ? "English" : "বাংলা"}</button>
       </nav>
-    </header>
-    <div className="hero shell">
-      <div className="hero-copy">
-        <span className="pill">DHAKA FIRST · NATIONWIDE BY DESIGN</span>
-        <h1>From a parcel to your <em>weekly groceries.</em> One TRIPPY.</h1>
-        <p>Reliable parcel logistics and fresh & dry grocery shopping, built for how Bangladesh lives and moves.</p>
-        <div className="hero-points"><span>✓ Bangla-first catalog</span><span>✓ Verified delivery partners planned</span><span>✓ Transparent tracking foundation</span></div>
-        <a className="primary-button hero-cta" href="#services">Explore the platform ↗</a>
+    </div></header>
+    <main className="wrap">
+      <div className="campaign-layout">
+        <aside className="service-rail"><img src="/products/rohu.webp" alt="" /><h2>{t("Prepared your way", "আপনার পছন্দমতো প্রস্তুতি")}</h2>
+          <p>{t("Choose whole, cleaned, or cut on eligible Fresh items.", "তাজা পণ্যে আস্ত, পরিষ্কার বা কাটা বেছে নিন।")}</p><a href="/groceries">{t("Shop Fresh", "তাজা পণ্য দেখুন")} →</a></aside>
+        <DeliveryBanner bn={bn}/>
+        <aside className="service-rail"><img src="/delivery-hero.webp" alt="" /><h2>{t("Pack. Quote. Send.", "প্যাক করুন। খরচ দেখুন। পাঠান।")}</h2>
+          <p>{t("Measure your packed parcel, then choose pickup and delivery areas.", "প্যাক করা পার্সেল মেপে পিকআপ ও গন্তব্য এলাকা বেছে নিন।")}</p><a href="/parcels">{t("Estimate delivery", "খরচ দেখুন")} →</a></aside>
       </div>
-      <div className="hero-art" aria-hidden="true">
-        <div className="orbit orbit-one" /><div className="orbit orbit-two" />
-        <div className="hero-cube">📦</div>
-        <div className="floating-card fc-one">🥬 Fresh & prepared</div>
-        <div className="floating-card fc-two">🚚 Parcel tracking</div>
-        <div className="floating-card fc-three">🛒 Dry groceries</div>
+      <div className="service-entry">
+        <a href="/parcels"><p className="kicker">{t("PARCEL DELIVERY", "পার্সেল ডেলিভারি")}</p><h2>{t("Send a parcel across Dhaka", "ঢাকার মধ্যে পার্সেল পাঠান")}</h2><span>{t("Get a delivery estimate", "আনুমানিক খরচ দেখুন")} →</span></a>
+        <a href="/groceries"><p className="kicker">{t("TRIPPY GROCERIES", "ট্রিপি বাজার")}</p><h2>{t("Fresh market and kitchen essentials", "তাজা বাজার ও রান্নাঘরের প্রয়োজনীয় পণ্য")}</h2><span>{t("Explore the grocery shop", "বাজার দেখুন")} →</span></a>
       </div>
-    </div>
-    <section className="services shell" id="services">
-      <div className="section-heading"><span className="section-eyebrow">TWO SERVICES. ONE PLATFORM.</span>
-        <h2>Choose how TRIPPY helps today.</h2></div>
-      <div className="service-tabs" role="tablist" aria-label="Delivery service">
-        <button type="button" role="tab" aria-selected={service === "parcel"}
-          className={service === "parcel" ? "service-tab selected" : "service-tab"}
-          onClick={() => setService("parcel")}>📦 Parcel delivery</button>
-        <button type="button" role="tab" aria-selected={service === "grocery"}
-          className={service === "grocery" ? "service-tab selected" : "service-tab"}
-          onClick={() => setService("grocery")}>🥦 TRIPPY groceries</button>
-      </div>
-      {service === "parcel" ? <ParcelQuote /> : <GroceryCatalog />}
-    </section>
-    <section className="timeline shell" id="how">
-      <div className="section-heading"><span className="section-eyebrow">BUILT AROUND YOUR DAY</span><h2>Two different delivery promises.</h2></div>
-      <div className="timeline-grid">
-        <article><div className="timeline-icon">📦</div><h3>Parcels</h3><p>Same-city target: within 24 hours. Intercity expansion: 3–5 days on active routes.</p></article>
-        <article><div className="timeline-icon">☀️</div><h3>Groceries before 1 PM</h3><p>Proposed same-day delivery window: before 9 PM, subject to capacity.</p></article>
-        <article><div className="timeline-icon">🌙</div><h3>1 PM to 9 PM</h3><p>Proposed next-day delivery by 9 AM. Orders from 9 PM: next day by 9 PM.</p></article>
-      </div>
-      <p className="muted" style={{marginTop: 18}}>These are planning targets. Live service coverage and slot guarantees are not yet enabled.</p>
-    </section>
-    <footer className="site-footer"><div className="shell"><Brand /><p>TRIPPY Delivery · Parcel-first logistics and first-party groceries · Dhaka launch plan</p><small>Development preview — not accepting real customer orders.</small></div></footer>
-  </main>;
+    </main>
+    <footer className="site-footer"><div className="wrap"><strong>TRIPPY Delivery</strong><p>{t("Preview · Customer orders and payments are disabled.", "প্রিভিউ · গ্রাহকের অর্ডার ও পেমেন্ট বন্ধ আছে।")}</p></div></footer>
+  </div>;
 }
