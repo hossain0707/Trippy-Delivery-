@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_env: Literal["local", "test", "staging", "production"] = "local"
+    app_env: Literal["local", "test", "preview", "staging", "production"] = "local"
     database_url: str = "postgresql+psycopg://trippy:local_only_change_me@localhost:5433/trippy"
     cors_origins: str = "http://localhost:3000"
     allow_dev_auth: bool = False
@@ -18,11 +18,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_environment(self):
-        if self.app_env in ("staging", "production"):
-            if self.allow_dev_auth:
-                raise ValueError("Development auth is forbidden in staging/production")
-            if not all([self.jwt_issuer, self.jwt_audience, self.jwt_jwks_url]):
-                raise ValueError("JWT issuer, audience and JWKS URL are required")
+        if self.app_env in ("preview", "staging", "production") and self.allow_dev_auth:
+            raise ValueError("Development auth is forbidden for hosted environments")
+        if self.app_env in ("staging", "production") and not all(
+            [self.jwt_issuer, self.jwt_audience, self.jwt_jwks_url]
+        ):
+            raise ValueError("JWT issuer, audience and JWKS URL are required")
         return self
 
     @property
