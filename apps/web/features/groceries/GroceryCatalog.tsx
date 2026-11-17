@@ -31,7 +31,7 @@ export function GroceryCatalog() {
 
   const shown = products.filter(p => filter === "all" || p.category === filter);
   const summary = useMemo(() => {
-    const lines = products.filter(p => selected[p.sku]?.quantity > 0);
+    const lines = products.filter(p => Number(selected[p.sku]?.quantity ?? 0) > 0);
     const total = lines.reduce((sum, p) => {
       const choice = selected[p.sku];
       const fee = choice.preparation === "cleaned" || choice.preparation === "cut"
