@@ -23,7 +23,8 @@ mistake an engineering scaffold for an authorized live delivery business.
 - [ ] Deploy the GitHub-connected Cloudflare Pages export and verify pricing on desktop and mobile.
 - [ ] Provision isolated managed PostgreSQL, store the TLS DSN securely, and verify migration and readiness.
 - [ ] Validate the hosted fresh and dry catalog and fresh preparation options with synthetic inventory.
-- [ ] Verify project-scoped cost alerts and the launch budget before expanding public traffic.
+- [x] Configure and verify a budget scoped to the development project.
+- [ ] Review a separate production budget before increasing traffic.
 
 ## BLOCKERS — before any real customer ordering
 

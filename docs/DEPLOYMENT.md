@@ -54,7 +54,7 @@ blocks all real order write endpoints in `APP_ENV=preview`; only parcel
 quotation calculations can be POSTed. No customer payment or booking capability
 may be exposed.
 
-Billing is enabled for `trippy-delivery-2026`. Configure request-based billing, 1 vCPU, 512 MiB, 0–1 instances, concurrency 10, a 30-second timeout, and startup CPU boost off. Cloud Run and Artifact Registry free allowances are shared across the billing account. Project-scoped budget alerts track spending without automatically capping it.
+Billing is enabled for `trippy-delivery-2026`. Configure request-based billing, 1 vCPU, 512 MiB, 0–1 instances, concurrency 10, a 30-second timeout, and startup CPU boost off. Cloud Run and Artifact Registry free allowances are shared across the billing account. The `TRIPPY Delivery preview` budget tracks this project only. It sends alerts at 50% and 100% of a ₩1,000 monthly budget and when forecast spending reaches 100%. The alerts do not cap spending.
 
 ### Dedicated preview database
 
