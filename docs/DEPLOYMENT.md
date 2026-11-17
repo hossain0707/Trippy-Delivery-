@@ -1,19 +1,19 @@
 # Dedicated Cloudflare + Google Cloud deployment
 
-> The read-only development API is live. Cloudflare Pages provisioning requires repository access for the installed GitHub app. A separate hosted PostgreSQL database is pending.
+> The read-only development API is live. The GitHub-connected Cloudflare Pages preview is live. A separate hosted PostgreSQL database is pending.
 
 | Resource | Preview status |
 | --- | --- |
 | Cloud Run service | [trippy-delivery-api-dev](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app) in `asia-south1` |
 | API documentation | [OpenAPI UI](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app/docs) |
 | Health | [Liveness](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app/health/live) returns 200. [Readiness](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app/health/ready) returns 503 until PostgreSQL is attached. |
-| Cloudflare Pages | `trippy-delivery` is the requested project name. Verify the issued hostname before updating CORS. |
+| Cloudflare Pages | [trippy-delivery.pages.dev](https://trippy-delivery.pages.dev) builds from `main`. The deployed API accepts this origin. |
 | Hosted database | Dedicated instance pending. The existing Supabase Free projects are allocated to Corporate Mobility. |
 
 ## Isolation boundary
 
 - Google Cloud project: `trippy-delivery-2026` — a new project created for this application. Never use `trippy-corporate-mobility`, NEXUS-100, Chotpot or any pre-existing project.
-- Cloudflare Pages project: proposed `trippy-delivery` (create under the authorized Cloudflare account; do not reuse any Pages project).
+- Cloudflare Pages project: `trippy-delivery`, dedicated to this repository.
 - GitHub: `hossain0707/Trippy-Delivery-` only.
 - Separate environment variables, credentials, database, logs, operational permissions and future staging/production pipelines.
 

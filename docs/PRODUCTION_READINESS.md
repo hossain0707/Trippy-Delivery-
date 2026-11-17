@@ -20,7 +20,7 @@ mistake an engineering scaffold for an authorized live delivery business.
 
 - [x] Deploy the dedicated Cloud Run API in read-only preview mode.
 - [x] Confirm public liveness, provisional parcel estimates, and rejection of parcel and grocery writes.
-- [ ] Deploy the GitHub-connected Cloudflare Pages export and verify pricing on desktop and mobile.
+- [x] Deploy the GitHub-connected Cloudflare Pages export and verify pricing on desktop and mobile.
 - [ ] Provision isolated managed PostgreSQL, store the TLS DSN securely, and verify migration and readiness.
 - [ ] Validate the hosted fresh and dry catalog and fresh preparation options with synthetic inventory.
 - [x] Configure and verify a budget scoped to the development project.
