@@ -6,11 +6,24 @@ import { previewCatalog } from "./previewCatalog";
 
 type Product = { sku: string; name_en: string; name_bn: string; category: "fresh" | "dry";
   unit: string; price_bdt: number | string; processing_fee_bdt: number | string; stock_qty: number | string; department?: Department; photo?: string | null };
-type Prep = "whole" | "cleaned" | "cut";
+type Prep = "whole" | "cleaned" | "cut-only" | "cut";
 type Line = { sku: string; prep: Prep; quantity: number };
 const departmentPhotos: Record<Department, string> = { vegetables: "eggplant", fruit: "mango", fish: "rohu", meat: "chicken", dairy: "milk", pantry: "rice", essentials: "soap" };
 const catalogDetails = new Map<string, { department: Department; photo: string | null }>(previewCatalog.map(p => [p.sku, p]));
-const preparations = { whole: ["Whole / as sold", "আস্ত / স্বাভাবিক"], cleaned: ["Cleaned", "পরিষ্কার করা"], cut: ["Cleaned and cut", "পরিষ্কার ও কাটা"] } as const;
+const preparations = {
+  whole: ["Whole / as sold", "আস্ত / স্বাভাবিক"],
+  cleaned: ["Cleaned only", "শুধু পরিষ্কার"],
+  "cut-only": ["Cut only", "শুধু কাটা"],
+  cut: ["Cleaned & cut", "পরিষ্কার ও কাটা"],
+} as const;
+const descriptions = {
+  whole: ["The item stays in its original form.", "পণ্যটি স্বাভাবিক অবস্থায় থাকবে।"],
+  cleaned: ["Prepared for cleaning and kept whole.", "পরিষ্কার করা হবে এবং আস্ত থাকবে।"],
+  "cut-only": ["Cut into pieces with no extra cleaning service.", "টুকরো করা হবে, অতিরিক্ত পরিষ্কার করার সেবা ছাড়া।"],
+  cut: ["Cleaned first, then cut into pieces.", "আগে পরিষ্কার, তারপর টুকরো করা হবে।"],
+} as const;
+const exampleLabels = { fish: ["Example shown with Rohu fish.", "রুই মাছ দিয়ে দেখানো নমুনা।"], meat: ["Example shown with chicken.", "মুরগি দিয়ে দেখানো নমুনা।"], produce: ["Example shown with potatoes.", "আলু দিয়ে দেখানো নমুনা।"] } as const;
+const asSoldOnly = new Set(["EGGS", "PRAWNS", "BEEF-MINCE", "DRUMSTICKS", "JACKFRUIT-PODS"]);
 
 export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
   const t = (en: string, bangla: string) => bn ? bangla : en;
@@ -20,6 +33,7 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
   const [department, setDepartment] = useState<Department | undefined>("vegetables");
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(12);
+  const [choices, setChoices] = useState<Record<string, Prep>>({});
   const [cart, setCart] = useState<Line[]>([]);
   useEffect(() => {
     let active = true;
@@ -66,18 +80,29 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
       {status !== "loading" && shown.length === 0 && <p>{t("No matching groceries.", "মিলেছে এমন পণ্য নেই।")}</p>}
       {status !== "loading" && shown.length > 0 && <h3 className="shelf-heading">{search.trim() ? t("Search results", "খোঁজার ফলাফল") : department ? departments[department][bn ? 1 : 0] : category === "fresh" ? t("All Fresh groceries", "সব তাজা পণ্য") : t("All Dry groceries & essentials", "সব শুকনা ও নিত্যপ্রয়োজনীয় পণ্য")} <small>{shown.length.toLocaleString(bn ? "bn-BD" : "en-BD")} {t("products", "পণ্য")}</small></h3>}
       <div className="cards">{shown.slice(0, limit).map(p => {
-        const canPrepare = p.category === "fresh" && Number(p.processing_fee_bdt) > 0;
+
         const remaining = Number(p.stock_qty) - cart.filter(l => l.sku === p.sku).reduce((sum, l) => sum + l.quantity, 0);
         const photo = p.photo ?? catalogDetails.get(p.sku)?.photo;
         const group = p.department ?? catalogDetails.get(p.sku)?.department;
+        const options = p.category === "fresh" && group && group !== "dairy" && !asSoldOnly.has(p.sku);
+        const prep = options ? choices[p.sku] ?? "whole" : "whole";
+        const example = group === "fish" ? "fish" : group === "meat" ? "meat" : "produce";
+        const illustration = prep !== "whole" ? "/preparation/" + example + "-" + prep + ".webp" : undefined;
+        const displayImage = illustration ?? (photo ? "/products/" + photo + ".webp" : undefined);
         return <article key={p.sku}>
-          {photo && <img className="product-photo" src={"/products/" + photo + ".webp"} alt={name(p)} width={280} height={280} loading="lazy" />}
+          {displayImage && <img className="product-photo" src={displayImage} alt={illustration ? t("Illustrative preparation example", "প্রস্তুতির নমুনা ছবি") : name(p)} width={280} height={280} loading="lazy" />}
           {group && <p className="product-department">{departments[group][bn ? 1 : 0]}</p>}
           <h3>{name(p)}</h3><p>{money(Number(p.price_bdt))} / {unit(p)}</p>
-          <form onSubmit={e => { e.preventDefault(); add(p, canPrepare ? new FormData(e.currentTarget).get("prep") as Prep : "whole"); }}>
-            {canPrepare && <label>{t("Preparation", "প্রস্তুতি")}<select name="prep">
-              {(["whole", "cleaned", "cut"] as const).map(v => <option value={v} key={v}>{prepName(v)}{v !== "whole" && " +" + money(Number(p.processing_fee_bdt)) + "/" + unit(p)}</option>)}
+          <form onSubmit={e => { e.preventDefault(); add(p, prep); }}>
+            {options && <label>{t("Preparation", "প্রস্তুতি")}<select value={prep} onChange={e => {
+              const next = e.currentTarget.value as Prep;
+              setChoices(prev => ({ ...prev, [p.sku]: next }));
+            }}>
+              {(Object.keys(preparations) as Prep[]).map(v => <option value={v} key={v}>{prepName(v)}{v !== "whole" && Number(p.processing_fee_bdt) > 0 ? " +" + money(Number(p.processing_fee_bdt)) + "/" + unit(p) : ""}</option>)}
             </select></label>}
+            {options && <div className="preparation-note" aria-live="polite">{descriptions[prep][bn ? 1 : 0]}
+              {illustration && <small>{exampleLabels[example][bn ? 1 : 0]}</small>}
+            </div>}
             <button className="primary" type="submit" disabled={remaining <= 0}>{remaining > 0 ? t("Add to basket", "ঝুড়িতে যোগ করুন") : t("Stock limit reached", "স্টকের সীমা পূর্ণ")}</button>
           </form>
         </article>;
