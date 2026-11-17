@@ -1,101 +1,84 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { previewCatalog } from "./previewCatalog";
 
-type Preparation = "none" | "whole" | "cleaned" | "cut";
-type Product = {
-  sku: string;
-  name_en: string;
-  name_bn: string;
-  category: "fresh" | "dry";
-  unit: string;
-  price_bdt: string | number;
-  processing_fee_bdt: string | number;
-  stock_qty: string | number;
-};
-type Selected = { quantity: number; preparation: Preparation };
+type Product = { sku: string; name_en: string; name_bn: string; category: "fresh" | "dry";
+  unit: string; price_bdt: number | string; processing_fee_bdt: number | string; stock_qty: number | string };
+type Prep = "whole" | "cleaned" | "cut";
+type Line = { sku: string; prep: Prep; quantity: number };
+const preparations = { whole: ["Whole / as sold", "আস্ত / স্বাভাবিক"], cleaned: ["Cleaned", "পরিষ্কার করা"], cut: ["Cleaned and cut", "পরিষ্কার ও কাটা"] } as const;
 
-export function GroceryCatalog() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filter, setFilter] = useState<"all" | "fresh" | "dry">("all");
-  const [selected, setSelected] = useState<Record<string, Selected>>({});
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
+export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
+  const t = (en: string, bangla: string) => bn ? bangla : en;
+  const [products, setProducts] = useState<readonly Product[]>([]);
+  const [status, setStatus] = useState<"loading" | "live" | "sample">("loading");
+  const [category, setCategory] = useState<"fresh" | "dry">("fresh");
+  const [search, setSearch] = useState("");
+  const [cart, setCart] = useState<Line[]>([]);
   useEffect(() => {
-    apiGet<Product[]>("/api/v1/groceries/products")
-      .then(setProducts)
-      .catch(() => setError("The grocery catalog is temporarily unavailable."))
-      .finally(() => setLoading(false));
+    let active = true;
+    apiGet<Product[]>("/api/v1/groceries/products").then(items => {
+      if (active) { setProducts(items); setStatus("live"); }
+    }).catch(() => {
+      if (active) { setProducts(previewCatalog); setStatus("sample"); }
+    });
+    return () => { active = false; };
   }, []);
-
-  const shown = products.filter(p => filter === "all" || p.category === filter);
-  const summary = useMemo(() => {
-    const lines = products.filter(p => Number(selected[p.sku]?.quantity ?? 0) > 0);
-    const total = lines.reduce((sum, p) => {
-      const choice = selected[p.sku];
-      const fee = choice.preparation === "cleaned" || choice.preparation === "cut"
-        ? Number(p.processing_fee_bdt) : 0;
-      return sum + choice.quantity * (Number(p.price_bdt) + fee);
-    }, 0);
-    return { lines, total };
-  }, [products, selected]);
-
-  function setChoice(sku: string, value: Partial<Selected>, fresh: boolean) {
-    setSelected(previous => {
-      const current = previous[sku] || { quantity: 0, preparation: fresh ? "whole" : "none" };
-      return { ...previous, [sku]: { ...current, ...value } };
+  const money = (value: number) => new Intl.NumberFormat(bn ? "bn-BD" : "en-BD", { style: "currency", currency: "BDT", maximumFractionDigits: 2 }).format(value);
+  const name = (p: Product) => bn ? p.name_bn : p.name_en;
+  const unit = (p: Product) => bn && p.unit === "kg" ? "কেজি" : p.unit;
+  const prepName = (p: Prep) => preparations[p][bn ? 1 : 0];
+  const shown = products.filter(p => p.category === category && (p.name_en + " " + p.name_bn).toLowerCase().includes(search.trim().toLowerCase()));
+  const priced = cart.flatMap(line => {
+    const product = products.find(p => p.sku === line.sku);
+    if (!product) return [];
+    const fee = line.prep === "whole" ? 0 : Number(product.processing_fee_bdt);
+    return [{ ...line, product, fee, total: line.quantity * (Number(product.price_bdt) + fee) }];
+  });
+  function add(p: Product, prep: Prep) {
+    setCart(previous => {
+      const quantity = Math.min(1, Number(p.stock_qty) - previous.filter(l => l.sku === p.sku).reduce((sum, l) => sum + l.quantity, 0));
+      if (quantity <= 0) return previous;
+      if (!previous.some(l => l.sku === p.sku && l.prep === prep)) return [...previous, { sku: p.sku, prep, quantity }];
+      return previous.map(l => l.sku === p.sku && l.prep === prep ? { ...l, quantity: l.quantity + quantity } : l);
     });
   }
-
-  return <section className="feature-card">
-    <div className="section-eyebrow">TRIPPY GROCERIES · FIRST-PARTY INVENTORY</div>
-    <h2>Fresh from the source. Essentials for every home.</h2>
-    <p>TRIPPY is the main vendor. Choose raw, cleaned, or cut preparation for suitable fresh groceries; dry groceries are a separate category.</p>
-    <div className="filter-row" role="group" aria-label="Grocery type">
-      {(["all", "fresh", "dry"] as const).map(value => <button key={value} type="button"
-        className={filter === value ? "filter active" : "filter"} onClick={() => setFilter(value)}>
-        {value === "all" ? "All groceries" : value === "fresh" ? "Fresh groceries" : "Dry groceries"}
-      </button>)}
-    </div>
-    {loading && <p className="muted">Loading catalog…</p>}
-    {error && <p className="error" role="alert">{error}</p>}
-    {!loading && !error && shown.length === 0 && <p className="muted">No products are available right now.</p>}
-    <div className="product-grid">
-      {shown.map(p => {
-        const choice = selected[p.sku] || { quantity: 0, preparation: p.category === "fresh" ? "whole" : "none" };
-        return <article className="product-card" key={p.sku}>
-          <div className="product-emoji" aria-hidden="true">{p.category === "fresh" ? "🥬" : "🛒"}</div>
-          <div className="product-meta">{p.category === "fresh" ? "FRESH · RAW OR PROCESSED" : "DRY · ESSENTIALS"}</div>
-          <h3>{p.name_en}</h3><p lang="bn">{p.name_bn}</p>
-          <strong>৳{p.price_bdt} <small>/ {p.unit}</small></strong>
-          {p.category === "fresh" && <label className="product-option">Preparation
-            <select value={choice.preparation} onChange={e => setChoice(p.sku, { preparation: e.target.value as Preparation }, true)}>
-              <option value="whole">Unprocessed / whole</option>
-              <option value="cleaned">Cleaned</option>
-              <option value="cut">Cleaned &amp; cut</option>
-            </select>
-          </label>}
-          <label className="product-option">Quantity ({p.unit})
-            <input min="0" max={Number(p.stock_qty)} step={p.unit === "kg" ? "0.5" : "1"} type="number"
-              value={choice.quantity} onChange={e => setChoice(p.sku, {
-                quantity: Math.min(Number(p.stock_qty), Math.max(0, Number(e.target.value) || 0))
-              }, p.category === "fresh")} />
-          </label>
-          <div className="stock">In stock: {p.stock_qty} {p.unit}</div>
+  return <div className="split">
+    <div className="panel">
+      <label>{t("Search groceries", "পণ্য খুঁজুন")}<input type="search" value={search} onChange={e => setSearch(e.target.value)} /></label>
+      <div className="tabs"><button aria-pressed={category === "fresh"} onClick={() => setCategory("fresh")}>{t("Fresh groceries", "তাজা পণ্য")}</button>
+        <button aria-pressed={category === "dry"} onClick={() => setCategory("dry")}>{t("Dry groceries & essentials", "শুকনা ও নিত্যপ্রয়োজনীয় পণ্য")}</button></div>
+      {status === "loading" && <p role="status">{t("Loading groceries…", "পণ্য লোড হচ্ছে…")}</p>}
+      {status === "sample" && <p role="status">{t("Sample catalog · Live inventory is temporarily unavailable.", "নমুনা পণ্য · লাইভ স্টক এখন পাওয়া যাচ্ছে না।")}</p>}
+      {status !== "loading" && shown.length === 0 && <p>{t("No matching groceries.", "মিলেছে এমন পণ্য নেই।")}</p>}
+      <div className="cards">{shown.map(p => {
+        const canPrepare = p.category === "fresh" && Number(p.processing_fee_bdt) > 0;
+        const remaining = Number(p.stock_qty) - cart.filter(l => l.sku === p.sku).reduce((sum, l) => sum + l.quantity, 0);
+        return <article key={p.sku}>
+          <h3>{name(p)}</h3><p>{money(Number(p.price_bdt))} / {unit(p)}</p>
+          <form onSubmit={e => { e.preventDefault(); add(p, canPrepare ? new FormData(e.currentTarget).get("prep") as Prep : "whole"); }}>
+            {canPrepare && <label>{t("Preparation", "প্রস্তুতি")}<select name="prep">
+              {(["whole", "cleaned", "cut"] as const).map(v => <option value={v} key={v}>{prepName(v)}{v !== "whole" && " +" + money(Number(p.processing_fee_bdt)) + "/" + unit(p)}</option>)}
+            </select></label>}
+            <button className="primary" type="submit" disabled={remaining <= 0}>{remaining > 0 ? t("Add to basket", "ঝুড়িতে যোগ করুন") : t("Stock limit reached", "স্টকের সীমা পূর্ণ")}</button>
+          </form>
         </article>;
-      })}
+      })}</div>
     </div>
-    {summary.lines.length > 0 && <aside className="cart-preview">
-      <div><span className="section-eyebrow">SELECTED ITEMS</span><h3>Grocery selection preview</h3></div>
-      {summary.lines.map(p => <div className="cart-line" key={p.sku}>
-        <span>{p.name_en} · {selected[p.sku].quantity} {p.unit} · {selected[p.sku].preparation}</span>
-        <strong>৳{(selected[p.sku].quantity * (Number(p.price_bdt) +
-          (["cleaned", "cut"].includes(selected[p.sku].preparation) ? Number(p.processing_fee_bdt) : 0))).toFixed(2)}</strong>
+    <aside className="panel summary"><h3>{t("Your basket", "আপনার ঝুড়ি")}</h3>
+      {priced.length === 0 && <p>{t("Your basket is empty.", "আপনার ঝুড়ি খালি।")}</p>}
+      {priced.map(l => <div className="cart-row" key={l.sku + l.prep}>
+        <p>{name(l.product)} · {l.quantity} {unit(l.product)}{l.product.category === "fresh" && " · " + prepName(l.prep)}
+          {l.fee > 0 && <><br/>{t("Preparation", "প্রস্তুতি")} +{money(l.fee * l.quantity)}</>}<br/><strong>{money(l.total)}</strong></p>
+        <button type="button" className="secondary" aria-label={t("Remove one unit of ", "এক ইউনিট সরান ") + name(l.product)}
+          onClick={() => setCart(old => old.flatMap(v => v.sku !== l.sku || v.prep !== l.prep ? [v] : v.quantity > 1 ? [{...v, quantity: v.quantity - 1}] : []))}>−</button>
       </div>)}
-      <div className="cart-line"><strong>Indicative item total</strong><strong>৳{summary.total.toFixed(2)}</strong></div>
-      <p className="muted">Checkout is intentionally disabled until real authentication, payment, packing and delivery-slot capacity pass release review. Prices are local development examples.</p>
-    </aside>}
-    <div className="demo-note">This catalog is a development preview. Live inventory, delivery fees, taxes, checkout and fulfillment integrations are not yet active.</div>
-  </section>;
+      <p aria-live="polite"><strong>{t("Item subtotal", "পণ্যের মোট")} · {money(priced.reduce((sum, line) => sum + line.total, 0))}</strong></p>
+      <p>{t("Preview only. Checkout is disabled.", "শুধু প্রিভিউ। চেকআউট বন্ধ আছে।")}</p>
+      <details><summary>{t("Proposed delivery windows", "প্রস্তাবিত ডেলিভারি সময়")}</summary>
+        <p>{t("Dhaka time: before 1 PM, today by 9 PM. From 1 PM to before 9 PM, tomorrow by 9 AM. From 9 PM, tomorrow by 9 PM.", "ঢাকার সময়: দুপুর ১টার আগে, আজ রাত ৯টার মধ্যে। দুপুর ১টা থেকে রাত ৯টার আগে, আগামীকাল সকাল ৯টার মধ্যে। রাত ৯টা থেকে, আগামীকাল রাত ৯টার মধ্যে।")}</p>
+      </details>
+    </aside>
+  </div>;
 }

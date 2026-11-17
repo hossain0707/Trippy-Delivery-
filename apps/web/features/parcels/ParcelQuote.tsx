@@ -1,86 +1,61 @@
 "use client";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { apiPost } from "@/lib/api";
 
-type Quote = {
-  amount: number;
-  currency: string;
-  distance_km: number;
-  billable_weight_kg: number;
-  provisional: boolean;
-  disclaimer: string;
-};
+const areas = [
+  { en: "Mirpur", bn: "মিরপুর", latitude: 23.82, longitude: 90.365 },
+  { en: "Dhanmondi", bn: "ধানমন্ডি", latitude: 23.745, longitude: 90.375 },
+  { en: "Gulshan", bn: "গুলশান", latitude: 23.79, longitude: 90.414 },
+  { en: "Uttara", bn: "উত্তরা", latitude: 23.875, longitude: 90.397 },
+];
+type Quote = { amount: number; distance_km: number; billable_weight_kg: number };
 
-export function ParcelQuote() {
-  const [weight, setWeight] = useState("1");
-  const [length, setLength] = useState("25");
-  const [width, setWidth] = useState("20");
-  const [height, setHeight] = useState("10");
-  const [category, setCategory] = useState("general");
-  const [senderLat, setSenderLat] = useState("23.82");
-  const [senderLng, setSenderLng] = useState("90.365");
-  const [recipientLat, setRecipientLat] = useState("23.745");
-  const [recipientLng, setRecipientLng] = useState("90.375");
-  const [quote, setQuote] = useState<Quote | null>(null);
+export function ParcelQuote({ bn = false }: { bn?: boolean }) {
+  const [quote, setQuote] = useState<Quote>();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
-
-  async function estimate() {
+  const [error, setError] = useState(false);
+  const t = (en: string, bangla: string) => bn ? bangla : en;
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const location = (key: string) => {
+      const area = areas[Number(data.get(key))];
+      return { name: "Preview", phone: "01700000000", address_line: area.en + ", Dhaka",
+        city: "Dhaka", latitude: area.latitude, longitude: area.longitude };
+    };
+    setQuote(undefined);
     setPending(true);
-    setQuote(null);
-    setError("");
+    setError(false);
     try {
-      const payload = {
-        sender: {
-          name: "Demo Sender", phone: "01700000000", address_line: "Mirpur 10, Dhaka",
-          city: "Dhaka", latitude: Number(senderLat), longitude: Number(senderLng),
-        },
-        recipient: {
-          name: "Demo Recipient", phone: "01800000000", address_line: "Dhanmondi, Dhaka",
-          city: "Dhaka", latitude: Number(recipientLat), longitude: Number(recipientLng),
-        },
-        package: {
-          category, weight_kg: Number(weight), length_cm: Number(length),
-          width_cm: Number(width), height_cm: Number(height),
-        },
-      };
-      setQuote(await apiPost<Quote>("/api/v1/parcels/quote", payload));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to estimate");
+      setQuote(await apiPost<Quote>("/api/v1/parcels/quote", {
+        sender: location("pickup"), recipient: location("destination"),
+        package: { category: data.get("category"), weight_kg: Number(data.get("weight")),
+          length_cm: Number(data.get("length")), width_cm: Number(data.get("width")), height_cm: Number(data.get("height")) },
+      }));
+    } catch {
+      setError(true);
     } finally {
       setPending(false);
     }
   }
-
-  return <section className="feature-card">
-    <div className="section-eyebrow">PARCEL DELIVERY</div>
-    <h2>Send anything that matters.</h2>
-    <p>Independent approved couriers, secure handovers, and a delivery network designed to grow beyond Dhaka.</p>
-    <div className="quote-form">
-      <label>Weight (kg)<input min="0.01" step="0.1" type="number" value={weight} onChange={e => setWeight(e.target.value)} /></label>
-      <label>Length (cm)<input min="1" type="number" value={length} onChange={e => setLength(e.target.value)} /></label>
-      <label>Width (cm)<input min="1" type="number" value={width} onChange={e => setWidth(e.target.value)} /></label>
-      <label>Height (cm)<input min="1" type="number" value={height} onChange={e => setHeight(e.target.value)} /></label>
-      <label>Pickup latitude<input type="number" step="0.0001" value={senderLat} onChange={e => setSenderLat(e.target.value)} /></label>
-      <label>Pickup longitude<input type="number" step="0.0001" value={senderLng} onChange={e => setSenderLng(e.target.value)} /></label>
-      <label>Delivery latitude<input type="number" step="0.0001" value={recipientLat} onChange={e => setRecipientLat(e.target.value)} /></label>
-      <label>Delivery longitude<input type="number" step="0.0001" value={recipientLng} onChange={e => setRecipientLng(e.target.value)} /></label>
-      <label>Parcel type<select value={category} onChange={e => setCategory(e.target.value)}>
-        <option value="general">General parcel</option>
-        <option value="document">Documents</option>
-        <option value="fragile">Fragile</option>
-      </select></label>
-    </div>
-    <div className="demo-note">Sample Dhaka coordinates can be edited to explore estimates. Address autocomplete, verified road routing, traffic and partner availability remain future integrations.</div>
-    <button className="primary-button" type="button" onClick={estimate} disabled={pending}>
-      {pending ? "Calculating…" : "Estimate parcel charge"}
-    </button>
-    {error && <p className="error" role="alert">{error}</p>}
-    {quote && <div className="quote-result" role="status">
-      <div><span>Estimated charge</span><strong>৳{quote.amount}</strong></div>
-      <div><span>Estimated road distance</span><strong>{quote.distance_km} km</strong></div>
-      <div><span>Chargeable weight</span><strong>{quote.billable_weight_kg} kg</strong></div>
-      <small>{quote.disclaimer}</small>
-    </div>}
-  </section>;
+  return <div className="split">
+    <form className="panel" onSubmit={submit} onChange={() => { setQuote(undefined); setError(false); }}>
+      <fieldset disabled={pending}><legend>{t("Your delivery details", "ডেলিভারির বিবরণ")}</legend>
+        <div className="fields">
+          {([["pickup", t("Pickup area", "পিকআপ এলাকা")], ["destination", t("Delivery area", "গন্তব্য এলাকা")]]).map(([key, label], i) =>
+            <label key={key}>{label}<select name={key} defaultValue={i}>{areas.map((area, index) => <option key={area.en} value={index}>{bn ? area.bn : area.en}</option>)}</select></label>)}
+          <label>{t("Parcel type", "পার্সেলের ধরন")}<select name="category"><option value="general">{t("General", "সাধারণ")}</option><option value="document">{t("Document", "কাগজপত্র")}</option><option value="fragile">{t("Fragile", "ভঙ্গুর")}</option></select></label>
+          <label>{t("Weight (kg)", "ওজন (কেজি)")}<input name="weight" type="number" min=".01" max="50" step=".01" defaultValue="1" required /></label>
+          {([["length", t("Length", "দৈর্ঘ্য"), 25], ["width", t("Width", "প্রস্থ"), 20], ["height", t("Height", "উচ্চতা"), 10]] as const).map(([key, label, initial]) =>
+            <label key={key}>{label} ({t("cm", "সেমি")})<input name={key} type="number" min="1" max="200" defaultValue={initial} required /></label>)}
+        </div>
+        <button className="primary" type="submit">{pending ? t("Calculating…", "হিসাব হচ্ছে…") : t("Get estimate", "আনুমানিক খরচ দেখুন")}</button>
+      </fieldset>
+    </form>
+    <aside className="panel summary" aria-live="polite"><h3>{t("Delivery estimate", "আনুমানিক ডেলিভারি খরচ")}</h3>
+      {error && <p role="alert">{t("We couldn’t calculate your estimate. Please try again.", "খরচ হিসাব করা যায়নি। আবার চেষ্টা করুন।")}</p>}
+      {quote && <><strong className="amount">৳{quote.amount.toLocaleString(bn ? "bn-BD" : "en-BD")}</strong><p>{t("Estimated distance", "আনুমানিক দূরত্ব")} · {quote.distance_km} {t("km", "কিমি")}</p><p>{t("Billable weight", "চার্জযোগ্য ওজন")} · {quote.billable_weight_kg} {t("kg", "কেজি")}</p></>}
+      <p>{t("Estimates use Dhaka area centers and approximate road distance. Booking is disabled in this preview.", "খরচের হিসাব ঢাকার এলাকার কেন্দ্র ও আনুমানিক সড়ক দূরত্বের ওপর ভিত্তি করে। এই প্রিভিউতে বুকিং বন্ধ।")}</p>
+    </aside>
+  </div>;
 }
