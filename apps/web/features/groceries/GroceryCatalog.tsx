@@ -8,7 +8,7 @@ type Product = { sku: string; name_en: string; name_bn: string; category: "fresh
   unit: string; price_bdt: number | string; processing_fee_bdt: number | string; stock_qty: number | string; department?: Department; photo?: string | null };
 type Prep = "whole" | "cleaned" | "cut";
 type Line = { sku: string; prep: Prep; quantity: number };
-const departmentPhotos: Record<Department, string> = { vegetables: "eggplant", fruit: "mango", fish: "rohu", meat: "chicken", pantry: "rice", essentials: "soap" };
+const departmentPhotos: Record<Department, string> = { vegetables: "eggplant", fruit: "mango", fish: "rohu", meat: "chicken", dairy: "milk", pantry: "rice", essentials: "soap" };
 const catalogDetails = new Map<string, { department: Department; photo: string | null }>(previewCatalog.map(p => [p.sku, p]));
 const preparations = { whole: ["Whole / as sold", "আস্ত / স্বাভাবিক"], cleaned: ["Cleaned", "পরিষ্কার করা"], cut: ["Cleaned and cut", "পরিষ্কার ও কাটা"] } as const;
 
@@ -32,7 +32,7 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
   }, []);
   const money = (value: number) => new Intl.NumberFormat(bn ? "bn-BD" : "en-BD", { style: "currency", currency: "BDT", currencyDisplay: "narrowSymbol", maximumFractionDigits: 2 }).format(value);
   const name = (p: Product) => bn ? p.name_bn : p.name_en;
-  const unit = (p: Product) => bn && p.unit === "kg" ? "কেজি" : p.unit;
+  const unit = (p: Product) => bn ? ({ kg: "কেজি", L: "লিটার", piece: "টি", pack: "প্যাক", jar: "জার" } as Record<string, string>)[p.unit] ?? p.unit : p.unit;
   const prepName = (p: Prep) => preparations[p][bn ? 1 : 0];
   const shown = products.filter(p => (search.trim() ? true : p.category === category && (!department || (p.department ?? catalogDetails.get(p.sku)?.department) === department)) && (p.name_en + " " + p.name_bn).toLowerCase().includes(search.trim().toLowerCase()));
   const priced = cart.flatMap(line => {
