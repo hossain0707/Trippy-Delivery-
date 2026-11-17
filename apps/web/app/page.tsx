@@ -10,7 +10,7 @@ export default function Home() {
     <header className="site-header shell">
       <Brand />
       <nav aria-label="Main navigation"><a href="#services">Services</a><a href="#how">How it works</a>
-        <a href="https://github.com/hossain0707/Trippy-Delivery-" target="_blank" rel="noreferrer">GitHub ↗</a></nav>
+      </nav>
     </header>
     <div className="hero shell">
       <div className="hero-copy">

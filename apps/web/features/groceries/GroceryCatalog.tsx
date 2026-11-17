@@ -25,7 +25,7 @@ export function GroceryCatalog() {
   useEffect(() => {
     apiGet<Product[]>("/api/v1/groceries/products")
       .then(setProducts)
-      .catch(e => setError(e instanceof Error ? e.message : "Unable to load catalog"))
+      .catch(() => setError("The grocery catalog is temporarily unavailable."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -60,7 +60,7 @@ export function GroceryCatalog() {
     </div>
     {loading && <p className="muted">Loading catalog…</p>}
     {error && <p className="error" role="alert">{error}</p>}
-    {!loading && !error && shown.length === 0 && <p className="muted">No products published yet. Add local example catalog data for an engineering preview.</p>}
+    {!loading && !error && shown.length === 0 && <p className="muted">No products are available right now.</p>}
     <div className="product-grid">
       {shown.map(p => {
         const choice = selected[p.sku] || { quantity: 0, preparation: p.category === "fresh" ? "whole" : "none" };
