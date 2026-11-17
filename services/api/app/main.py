@@ -15,14 +15,6 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs" if config.app_env != "production" else None,
 )
-app.add_middleware(RequestAuditMiddleware)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[s.strip() for s in config.cors_origins.split(",") if s.strip()],
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization", "Idempotency-Key", "X-Dev-Actor"],
-    allow_credentials=False,
-)
 
 
 @app.middleware("http")
@@ -35,6 +27,16 @@ async def preview_write_guard(request: Request, call_next):
                 content={"detail": "TRIPPY Delivery read-only preview: orders are disabled."},
             )
     return await call_next(request)
+
+
+app.add_middleware(RequestAuditMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[s.strip() for s in config.cors_origins.split(",") if s.strip()],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization", "Idempotency-Key", "X-Dev-Actor"],
+    allow_credentials=False,
+)
 
 
 app.include_router(parcels, prefix="/api/v1")

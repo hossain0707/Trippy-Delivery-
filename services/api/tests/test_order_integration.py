@@ -68,12 +68,18 @@ def test_grocery_checkout_idempotency_and_cancellation(client):
     repeated = browser.post("/api/v1/groceries/orders", json=request_body(), headers=headers)
     assert repeated.status_code == 201
     assert repeated.json()["id"] == first.json()["id"]
+    assert repeated.json()["amount_bdt"] == first.json()["amount_bdt"]
     with factory() as db:
         assert db.get(Product, "ROHU").stock_qty == Decimal("3")
     cancel = browser.post("/api/v1/groceries/orders/" + first.json()["id"] + "/cancel")
     assert cancel.status_code == 200
     with factory() as db:
         assert db.get(Product, "ROHU").stock_qty == Decimal("5")
+        audit = db.query(audit_models.AuditRecord).order_by(audit_models.AuditRecord.created_at).all()
+        assert [event.action for event in audit] == ["grocery.order_placed", "grocery.order_cancelled"]
+        assert [event.request_id for event in audit] == [
+            first.headers["X-Request-ID"], cancel.headers["X-Request-ID"],
+        ]
 
 
 def test_dry_goods_reject_processing(client):
