@@ -9,6 +9,6 @@ export default function Page() {
       <a href="/groceries">{bn ? "বাজার" : "Groceries"}</a><button type="button" onClick={() => setBangla(!bn)}>{bn ? "English" : "বাংলা"}</button>
     </nav></div></header>
     <main className="wrap service"><p className="kicker">{bn ? "ঢাকা · প্রিভিউ" : "DHAKA · PREVIEW"}</p>
-      <h1>{bn ? "পার্সেল ডেলিভারি" : "Parcel delivery"}</h1><ParcelQuote bn={bn}/></main>
+      <h1>{bn ? "পার্সেল পাঠান" : "Send a parcel"}</h1><p>{bn ? "ঢাকার মধ্যে ডেলিভারির আনুমানিক খরচ দেখুন।" : "Get a delivery estimate in Dhaka."}</p><ParcelQuote bn={bn}/></main>
   </div>;
 }
