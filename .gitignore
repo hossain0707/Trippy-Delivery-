@@ -1,0 +1,16 @@
+# Credentials and local build output
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+node_modules/
+.next/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+*.log
+.DS_Store

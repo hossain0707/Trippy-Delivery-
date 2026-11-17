@@ -1,0 +1,36 @@
+name: trippy-delivery-local
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: trippy
+      POSTGRES_USER: trippy
+      POSTGRES_PASSWORD: local_only_change_me
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trippy -d trippy"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  api:
+    build: ./services/api
+    environment:
+      APP_ENV: local
+      ALLOW_DEV_AUTH: "true"
+      DATABASE_URL: postgresql+psycopg://trippy:local_only_change_me@postgres:5432/trippy
+      CORS_ORIGINS: http://localhost:3000
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [api]
+volumes:
+  postgres_data:
