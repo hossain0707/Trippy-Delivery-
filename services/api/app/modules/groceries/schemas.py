@@ -1,8 +1,8 @@
 from datetime import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 class Recipient(BaseModel):
@@ -41,3 +41,7 @@ class OrderOut(BaseModel):
     amount_bdt: Decimal
     delivery_deadline: datetime
     provisional_slot: bool = True
+
+    @field_serializer("amount_bdt", when_used="json")
+    def serialize_amount(self, value: Decimal) -> str:
+        return str(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))

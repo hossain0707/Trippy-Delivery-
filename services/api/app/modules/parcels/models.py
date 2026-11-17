@@ -18,7 +18,7 @@ class Parcel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     tracking_code: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
-    customer_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    customer_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     idempotency_key: Mapped[str] = mapped_column(String(120), nullable=False)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     sender: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=False)

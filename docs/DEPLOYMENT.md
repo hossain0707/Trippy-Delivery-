@@ -1,11 +1,19 @@
 # Dedicated Cloudflare + Google Cloud deployment
 
-> Status: configuration prepared; public web/API deployment pending account access and project billing. The repository is **not** approved for accepting real orders.
+> The read-only development API is live. The GitHub-connected Cloudflare Pages preview is live. A separate hosted PostgreSQL database is pending.
+
+| Resource | Preview status |
+| --- | --- |
+| Cloud Run service | [trippy-delivery-api-dev](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app) in `asia-south1` |
+| API documentation | [OpenAPI UI](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app/docs) |
+| Health | [Liveness](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app/health/live) returns 200. [Readiness](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app/health/ready) returns 503 until PostgreSQL is attached. |
+| Cloudflare Pages | [trippy-delivery.pages.dev](https://trippy-delivery.pages.dev) builds from `main`. The deployed API accepts this origin. |
+| Hosted database | Dedicated instance pending. The existing Supabase Free projects are allocated to Corporate Mobility. |
 
 ## Isolation boundary
 
 - Google Cloud project: `trippy-delivery-2026` — a new project created for this application. Never use `trippy-corporate-mobility`, NEXUS-100, Chotpot or any pre-existing project.
-- Cloudflare Pages project: proposed `trippy-delivery` (create under the authorized Cloudflare account; do not reuse any Pages project).
+- Cloudflare Pages project: `trippy-delivery`, dedicated to this repository.
 - GitHub: `hossain0707/Trippy-Delivery-` only.
 - Separate environment variables, credentials, database, logs, operational permissions and future staging/production pipelines.
 
@@ -46,15 +54,11 @@ blocks all real order write endpoints in `APP_ENV=preview`; only parcel
 quotation calculations can be POSTed. No customer payment or booking capability
 may be exposed.
 
-**Dependency:** Cloud Run requires project billing to be enabled. As of
-2026-11-17 the isolated project has no billing account attached. Do not
-silently attach existing projects' billing resources or reuse their credentials.
+Billing is enabled for `trippy-delivery-2026`. Configure request-based billing, 1 vCPU, 512 MiB, 0–1 instances, concurrency 10, a 30-second timeout, and startup CPU boost off. Cloud Run and Artifact Registry free allowances are shared across the billing account. The `TRIPPY Delivery preview` budget tracks this project only. It sends alerts at 50% and 100% of a ₩1,000 monthly budget and when forecast spending reaches 100%. The alerts do not cap spending.
 
-**Database:** No dedicated production database has been provisioned yet.
-The FastAPI `/health/live` endpoint can start without it, but
-`/health/ready` and grocery catalog need an isolated PostgreSQL instance
-and applied Alembic migrations. Configure new project-specific credentials,
-managed backups, secure network and migration job before enabling those features.
+### Dedicated preview database
+
+Use a separate PostgreSQL instance and restrict runtime access to the tables the preview requires. Use an operator-only migration credential for versioned Alembic migrations and store the runtime `DATABASE_URL` in project-scoped Secret Manager. Require TLS, prefer certificate verification where supported, and validate `alembic current` and `/health/ready` before importing synthetic grocery inventory. The local seed script deliberately accepts only local/test environments. Until PostgreSQL is connected, health/liveness and parcel quotes remain available while the grocery catalog is unavailable.
 
 ## Verification checklist
 
@@ -70,4 +74,4 @@ managed backups, secure network and migration job before enabling those features
 
 This is a **read-only development preview**, not commercial delivery.
 Do not switch `APP_ENV` to production or enable payment/checkout until the
-`docs/PRODUCTION_READINESS.md` checklist is complete and signed off.
+[production readiness checklist](PRODUCTION_READINESS.md) is complete and signed off.

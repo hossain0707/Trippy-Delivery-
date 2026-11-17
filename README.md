@@ -4,6 +4,8 @@
   <p><strong>One platform. Two dedicated delivery ecosystems.</strong></p>
   <p>Parcel logistics · First-party fresh and dry groceries · Dhaka-first, nationwide-ready</p>
   <p>
+    <a href="https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app/docs">Preview API docs</a> ·
+    <a href="https://trippy-delivery.pages.dev">Live web preview</a> ·
     <a href="#quick-start">Quick start</a> ·
     <a href="docs/ARCHITECTURE.md">Architecture</a> ·
     <a href="docs/ROADMAP.md">Roadmap</a> ·
@@ -15,7 +17,7 @@
 ---
 
 > **Status: engineering foundation / development preview. NOT approved for live customer orders.**
-> Dedicated Google Cloud project created: `trippy-delivery-2026` (currently not billed or deployed). Cloudflare Pages remains unprovisioned; see the [deployment plan](docs/DEPLOYMENT.md).
+> The [read-only FastAPI preview](https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app/health/live) runs on Cloud Run in Mumbai. See the [deployment status and configuration](docs/DEPLOYMENT.md) for frontend and database availability.
 > The repository contains working domain API foundations and a web preview. Live maps/traffic, courier verification, payments, slot capacity, warehouse processes and operations controls are not yet integrated. Never claim the system is production-launched.
 
 ## Product vision

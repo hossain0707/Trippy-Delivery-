@@ -30,8 +30,11 @@ gcloud run deploy "$SERVICE" \
   --source=services/api \
   --port=8000 \
   --allow-unauthenticated \
+  --cpu-throttling \
+  --no-cpu-boost \
   --min-instances=0 \
   --max-instances=1 \
+  --max=1 \
   --cpu=1 \
   --memory=512Mi \
   --concurrency=10 \
