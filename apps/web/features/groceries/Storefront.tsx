@@ -11,7 +11,7 @@ export function Storefront() {
       <Link href="/" className="wordmark">TRIPPY<span> Groceries</span></Link>
       <nav aria-label={t("Shop navigation", "দোকানের নেভিগেশন")}>
         <Link href="/parcels">{t("Parcel delivery", "পার্সেল ডেলিভারি")}</Link>
-        <Link href="#basket">{t("Basket", "ঝুড়ি")}</Link>
+        <Link href="/cart">{t("Basket", "ঝুড়ি")}</Link>
         <button type="button" onClick={() => setBangla(!bn)}>{bn ? "English" : "বাংলা"}</button>
       </nav>
     </div></header>

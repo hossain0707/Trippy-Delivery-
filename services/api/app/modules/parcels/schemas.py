@@ -12,6 +12,7 @@ class Address(BaseModel):
 
 
 class Package(BaseModel):
+    form: Literal["box", "envelope"] = "box"
     category: Literal["document", "general", "fragile"] = "general"
     weight_kg: float = Field(gt=0, le=30)
     length_cm: float = Field(gt=0, le=150)
@@ -20,6 +21,8 @@ class Package(BaseModel):
 
 
 class ParcelRequest(BaseModel):
+    customer_type: Literal["individual", "merchant"] = "individual"
+    pickup_instructions: str = Field(default="",max_length=500)
     sender: Address
     recipient: Address
     package: Package

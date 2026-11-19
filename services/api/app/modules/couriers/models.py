@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import DateTime, String
+from sqlalchemy.types import JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -12,6 +14,7 @@ class DeliveryPartner(Base):
     __tablename__ = "delivery_partners"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     actor_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    details: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), default=dict, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
     transport_mode: Mapped[str] = mapped_column(String(40), nullable=False)
     approved_by: Mapped[str | None] = mapped_column(String(128), nullable=True)

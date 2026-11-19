@@ -1,14 +1,17 @@
+import os
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.auth import Actor, get_actor
 from app.core.config import settings
-from app.core.database import is_ready
+from app.core.database import is_ready, engine
+from app.core.rate_limit import WriteRateLimit
 from app.core.observability import RequestAuditMiddleware, configure_logs
 from app.modules.groceries.router import router as groceries
 from app.modules.parcels.router import router as parcels
 from app.modules.operations.router import router as operations
+from app.modules.commerce.router import router as commerce, admin as commerce_admin
 
 configure_logs()
 config = settings()
@@ -23,7 +26,30 @@ app = FastAPI(
 async def preview_write_guard(request: Request, call_next):
     # Explicit hosted-preview mode: accept calculation requests but never mutate data.
     if config.app_env == "preview" and request.method not in ("GET", "HEAD", "OPTIONS"):
-        allowed = (request.method == "POST" and request.url.path == "/api/v1/parcels/quote") or (request.method == "PUT" and (request.url.path == "/api/v1/account/profile" or request.url.path.startswith(("/api/v1/admin/products/", "/api/v1/admin/couriers/"))))
+        path = request.url.path
+        allowed = (
+            request.method == "POST"
+            and path
+            in (
+                "/api/v1/parcels/quote",
+                "/api/v1/commerce/review",
+                "/api/v1/commerce/courier/application",
+            )
+        ) or (
+            request.method == "PUT"
+            and (
+                path in ("/api/v1/account/profile", "/api/v1/commerce/cart")
+                or path.startswith(
+                    (
+                        "/api/v1/admin/products/",
+                        "/api/v1/admin/couriers/",
+                        "/api/v1/admin/commerce/catalog/",
+                        "/api/v1/admin/commerce/settings/",
+                        "/api/v1/admin/commerce/couriers/",
+                    )
+                )
+            )
+        )
         if not allowed:
             return JSONResponse(
                 status_code=503,
@@ -35,6 +61,7 @@ async def preview_write_guard(request: Request, call_next):
     return response
 
 
+app.add_middleware(WriteRateLimit)
 app.add_middleware(RequestAuditMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -45,6 +72,8 @@ app.add_middleware(
 )
 
 
+app.include_router(commerce, prefix="/api/v1")
+app.include_router(commerce_admin, prefix="/api/v1")
 app.include_router(parcels, prefix="/api/v1")
 app.include_router(groceries, prefix="/api/v1")
 app.include_router(operations, prefix="/api/v1")
@@ -60,13 +89,21 @@ def account(actor: Actor = Depends(get_actor)):
 
 @app.get("/health/live", tags=["Health"])
 def live():
-    return {"status": "ok", "environment": config.app_env}
+    return {
+        "status": "ok",
+        "environment": config.app_env,
+        "revision": os.environ.get("K_REVISION", "local"),
+    }
 
 
 @app.get("/health/ready", tags=["Health"])
 def ready():
     try:
         is_ready()
+        from sqlalchemy import text
+
+        with engine().connect() as connection:
+            version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar()
     except Exception as error:
         raise HTTPException(503, "Database unavailable") from error
-    return {"status": "ready"}
+    return {"status": "ready", "migration": version}

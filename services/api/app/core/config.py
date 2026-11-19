@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     google_client_id: str | None = None
     google_admin_email: str | None = None
     google_admin_subject: str | None = None
+    live_orders_enabled: bool = False
+    pilot_approved: bool = False
     active_cities: str = "dhaka"
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -1,0 +1,534 @@
+"use client";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { GoogleAccess, useCredential } from "@/features/account/GoogleAccess";
+import {
+  commerceApi,
+  money,
+  type Product,
+  type BasketLine,
+  type Configuration,
+} from "@/lib/commerce";
+import { readBasket, writeBasket, lineTotal } from "@/lib/basket.mjs";
+type Review = {
+  subtotal_bdt: string;
+  discount_bdt: string;
+  delivery_fee_bdt: string;
+  total_bdt: string;
+  delivery_deadline: string;
+  slot_confirmed: boolean;
+  ordering_open: boolean;
+};
+function CheckoutForm({
+  lines,
+  bn,
+  clear,
+}: {
+  lines: BasketLine[];
+  bn: boolean;
+  clear: () => void;
+}) {
+  const token = useCredential();
+  const key = useRef("");
+  const [configuration, setConfiguration] = useState<Configuration | null>(
+    null,
+  );
+  const [savedCart, setSavedCart] = useState<BasketLine[]>([]);
+  const [review, setReview] = useState<Review | null>(null);
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [order, setOrder] = useState<{
+    id: string;
+    order_number: string;
+    payment_status: string;
+  } | null>(null);
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    address_line: "",
+    area: "",
+    city: "Dhaka",
+    postal_code: "",
+    instructions: "",
+    preparation_notes: "",
+    promo_code: "",
+    payment_method: "cod",
+    payment_reference: "",
+  });
+  const t = (en: string, b: string) => (bn ? b : en);
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      commerceApi<Configuration>("/commerce/configuration"),
+      commerceApi<{ items: BasketLine[] }>("/commerce/cart", token),
+    ])
+      .then(([c, b]) => {
+        if (active) {
+          setConfiguration(c);
+          setSavedCart(b.items);
+        }
+      })
+      .catch((e) => {
+        if (active) setStatus(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [token]);
+  const payload = {
+    destination: {
+      name: form.name,
+      phone: form.phone,
+      address_line: form.address_line,
+      city: form.city,
+      area: form.area,
+      postal_code: form.postal_code,
+    },
+    items: lines,
+    payment_method: form.payment_method,
+    payment_reference: form.payment_reference,
+    instructions: form.instructions,
+    preparation_notes: form.preparation_notes,
+    promo_code: form.promo_code,
+  };
+  const destination = configuration?.payments[form.payment_method];
+  if (order)
+    return (
+      <section className="panel">
+        <p className="kicker">{t("ORDER RECEIVED", "অর্ডার গৃহীত")}</p>
+        <h2>{order.order_number}</h2>
+        <p>
+          {t("Payment status", "পেমেন্টের অবস্থা")}: {order.payment_status}
+        </p>
+        <p>
+          {t(
+            "Your order is awaiting review. A submitted transfer reference is not a confirmed payment.",
+            "আপনার অর্ডার পর্যালোচনার অপেক্ষায়। লেনদেন নম্বর জমা দেওয়া মানে পেমেন্ট নিশ্চিত হওয়া নয়।",
+          )}
+        </p>
+        <Link href={"/orders?id=" + order.id}>
+          {t("View order", "অর্ডার দেখুন")}
+        </Link>
+      </section>
+    );
+  return (
+    <section className="panel checkout-panel">
+      <h2>{t("Delivery & payment", "ডেলিভারি ও পেমেন্ট")}</h2>
+      {configuration && !configuration.ordering_open && (
+        <p className="launch-notice">
+          {t(configuration.pilot.banner_en, configuration.pilot.banner_bn)}
+        </p>
+      )}
+      <div className="cart-account-actions">
+        <button
+          className="secondary"
+          disabled={!lines.length || busy}
+          onClick={async () => {
+            try {
+              await commerceApi("/commerce/cart", token, "PUT", {
+                items: lines,
+              });
+              setStatus(
+                t(
+                  "Basket saved to your account.",
+                  "আপনার অ্যাকাউন্টে ঝুড়ি সংরক্ষিত হয়েছে।",
+                ),
+              );
+            } catch (e) {
+              setStatus((e as Error).message);
+            }
+          }}
+        >
+          {t("Save basket to my account", "অ্যাকাউন্টে ঝুড়ি সংরক্ষণ")}
+        </button>
+        {savedCart.length > 0 && (
+          <button
+            className="secondary"
+            onClick={() => {
+              writeBasket(savedCart);
+              window.location.reload();
+            }}
+          >
+            {t("Restore my saved basket", "সংরক্ষিত ঝুড়ি ফিরিয়ে আনুন")}
+          </button>
+        )}
+      </div>
+      <form
+        onChange={() => setReview(null)}
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setStatus("");
+          try {
+            const value = await commerceApi<Review>(
+              "/commerce/review",
+              token,
+              "POST",
+              payload,
+            );
+            setReview(value);
+            key.current = crypto.randomUUID();
+          } catch (e) {
+            setStatus((e as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <div className="fields">
+          {(
+            [
+              "name",
+              "phone",
+              "address_line",
+              "area",
+              "city",
+              "postal_code",
+            ] as const
+          ).map((k) => (
+            <label key={k}>
+              {
+                {
+                  name: t("Recipient name", "প্রাপকের নাম"),
+                  phone: t("Bangladesh contact number", "বাংলাদেশের ফোন নম্বর"),
+                  address_line: t(
+                    "House, road & delivery address",
+                    "বাড়ি, সড়ক ও ঠিকানা",
+                  ),
+                  area: t("Area", "এলাকা"),
+                  city: t("City", "শহর"),
+                  postal_code: t("Postal code (optional)", "পোস্ট কোড (ঐচ্ছিক)"),
+                }[k]
+              }
+              <input
+                required={k !== "postal_code"}
+                type={k === "phone" ? "tel" : "text"}
+                minLength={k === "address_line" ? 5 : k === "phone" ? 8 : 1}
+                maxLength={
+                  k === "address_line" ? 300 : k === "phone" ? 20 : 120
+                }
+                value={form[k]}
+                onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+              />
+            </label>
+          ))}
+        </div>
+        <label>
+          {t("Delivery instructions", "ডেলিভারির নির্দেশনা")}
+          <textarea
+            maxLength={1000}
+            value={form.instructions}
+            onChange={(e) => setForm({ ...form, instructions: e.target.value })}
+          />
+        </label>
+        <label>
+          {t("Preparation instructions", "প্রস্তুতের নির্দেশনা")}
+          <textarea
+            maxLength={500}
+            value={form.preparation_notes}
+            onChange={(e) =>
+              setForm({ ...form, preparation_notes: e.target.value })
+            }
+          />
+        </label>
+        <label>
+          {t("Offer code (optional)", "অফার কোড (ঐচ্ছিক)")}
+          <input
+            maxLength={30}
+            pattern="[A-Z0-9-]*"
+            value={form.promo_code}
+            onChange={(e) =>
+              setForm({ ...form, promo_code: e.target.value.toUpperCase() })
+            }
+          />
+        </label>
+        <fieldset className="payment-methods">
+          <legend>
+            {t("Choose a payment method", "পেমেন্ট পদ্ধতি বেছে নিন")}
+          </legend>
+          {[
+            ["bkash", "bKash"],
+            ["nagad", "Nagad"],
+            ["rocket", "Rocket"],
+            ["bank", "Bank Transfer"],
+            ["cod", t("Cash on Delivery", "ক্যাশ অন ডেলিভারি")],
+          ].map(([id, name]) => (
+            <label
+              key={id}
+              className={
+                form.payment_method === id
+                  ? "payment-card selected"
+                  : "payment-card"
+              }
+            >
+              <input
+                type="radio"
+                name="payment"
+                value={id}
+                checked={form.payment_method === id}
+                disabled={!configuration?.payments[id]?.enabled}
+                onChange={() =>
+                  setForm({
+                    ...form,
+                    payment_method: id,
+                    payment_reference: "",
+                  })
+                }
+              />
+              <strong>{name}</strong>
+              <span>
+                {configuration?.payments[id]?.enabled
+                  ? id === "cod"
+                    ? t("Pay on receipt", "পণ্য পেয়ে মূল্য পরিশোধ")
+                    : t("Manual verification", "ম্যানুয়াল যাচাই")
+                  : t("Not enabled yet", "এখনো চালু নয়")}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        {form.payment_method !== "cod" && destination?.enabled && (
+          <div className="payment-instructions">
+            <h3>{t("Payment instructions", "পেমেন্ট নির্দেশনা")}</h3>
+            <p>{destination.instructions}</p>
+            {destination.bank_name && (
+              <p>
+                {destination.bank_name} · {destination.account_name} ·{" "}
+                {destination.branch} · {destination.routing}
+              </p>
+            )}
+            <p>
+              <strong>
+                {destination.receiving_number || destination.account_number}
+              </strong>{" "}
+              <button
+                type="button"
+                className="secondary"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(
+                    destination.receiving_number ||
+                      destination.account_number ||
+                      "",
+                  );
+                  setStatus(t("Number copied.", "নম্বর কপি হয়েছে।"));
+                }}
+              >
+                {t("Copy", "কপি")}
+              </button>
+            </p>
+            <p>
+              {t("Amount due", "প্রদেয়")}:{" "}
+              {review
+                ? money(review.total_bdt, bn)
+                : t(
+                    "Review your order to calculate the final amount.",
+                    "চূড়ান্ত মূল্য জানতে অর্ডার পর্যালোচনা করুন।",
+                  )}
+            </p>
+            <label>
+              {t("Transaction reference", "লেনদেন নম্বর")}
+              <input
+                maxLength={120}
+                value={form.payment_reference}
+                onChange={(e) =>
+                  setForm({ ...form, payment_reference: e.target.value })
+                }
+              />
+            </label>
+            <p>
+              {t(
+                "Your payment stays pending until the owner verifies receipt.",
+                "মালিক প্রাপ্তি যাচাই না করা পর্যন্ত পেমেন্ট অপেক্ষমাণ থাকবে।",
+              )}
+            </p>
+          </div>
+        )}
+        <p>
+          {t(
+            "Delivery windows use Bangladesh time and depend on confirmed area coverage, preparation and courier capacity.",
+            "ডেলিভারির সময় বাংলাদেশ সময় অনুযায়ী এবং এলাকার সেবা, প্রস্তুত ও কুরিয়ারের সক্ষমতার ওপর নির্ভরশীল।",
+          )}
+        </p>
+        <button
+          className="secondary"
+          disabled={busy || !lines.length || !destination?.enabled}
+        >
+          {busy
+            ? t("Checking…", "যাচাই হচ্ছে…")
+            : t("Review order & delivery fee", "অর্ডার ও ডেলিভারি ফি দেখুন")}
+        </button>
+        {review && (
+          <div className="order-review">
+            <h3>{t("Final order review", "চূড়ান্ত পর্যালোচনা")}</h3>
+            <p>
+              {t("Items", "পণ্য")}: {money(review.subtotal_bdt, bn)}
+            </p>
+            <p>
+              {t("Delivery", "ডেলিভারি")}: {money(review.delivery_fee_bdt, bn)}
+            </p>
+            {Number(review.discount_bdt) > 0 && (
+              <p>
+                {t("Offer savings", "অফারের সাশ্রয়")}:{" "}
+                {money(review.discount_bdt, bn)}
+              </p>
+            )}
+            <strong>
+              {t("Total", "মোট")}: {money(review.total_bdt, bn)}
+            </strong>
+            <p>
+              {t("Proposed delivery deadline", "প্রস্তাবিত ডেলিভারি সময়")}:{" "}
+              {new Date(review.delivery_deadline).toLocaleString(
+                bn ? "bn-BD" : "en-BD",
+                { timeZone: "Asia/Dhaka" },
+              )}
+            </p>
+            <button
+              className="primary"
+              type="button"
+              disabled={
+                busy || !configuration?.ordering_open || !review.ordering_open
+              }
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const o = await commerceApi<{
+                    id: string;
+                    order_number: string;
+                    payment_status: string;
+                  }>("/groceries/orders", token, "POST", payload, key.current);
+                  setOrder(o);
+                  await commerceApi("/commerce/cart", token, "PUT", {
+                    items: [],
+                  });
+                  clear();
+                } catch (e) {
+                  setStatus((e as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t("Place order", "অর্ডার করুন")}
+            </button>
+          </div>
+        )}
+      </form>
+      <p role="status">{status}</p>
+    </section>
+  );
+}
+export function BasketCheckout() {
+  const [bn, setBn] = useState(false);
+  const [lines, setLines] = useState<BasketLine[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const sync = () => setLines(readBasket());
+    sync();
+    window.addEventListener("trippy-basket", sync);
+    commerceApi<Product[]>("/groceries/products")
+      .then(setProducts)
+      .catch((e) => setError(e.message));
+    return () => window.removeEventListener("trippy-basket", sync);
+  }, []);
+  const t = (en: string, b: string) => (bn ? b : en);
+  const subtotal = lines.reduce((n, l) => {
+    const p = products.find((p) => p.sku === l.sku);
+    return p ? n + lineTotal(p, l) : n;
+  }, 0);
+  return (
+    <main className="wrap commerce-page">
+      <nav className="market-nav">
+        <Link className="wordmark" href="/">
+          TRIPPY Delivery
+        </Link>
+        <Link href="/groceries">{t("Continue shopping", "বাজার করুন")}</Link>
+        <button onClick={() => setBn(!bn)}>{bn ? "English" : "বাংলা"}</button>
+      </nav>
+      <p className="kicker">{t("YOUR MARKET BASKET", "আপনার বাজারের ঝুড়ি")}</p>
+      <h1>
+        {t(
+          "Good food. A little less effort.",
+          "প্রতিদিনের ভালো খাবার, একটু কম পরিশ্রম।",
+        )}
+      </h1>
+      <div className="checkout-grid">
+        <section className="panel">
+          <h2>{t("Your basket", "আপনার ঝুড়ি")}</h2>
+          <p role="status">{error}</p>
+          {!lines.length && (
+            <p>{t("Your basket is empty.", "আপনার ঝুড়ি খালি।")}</p>
+          )}
+          {lines.map((l) => {
+            const p = products.find((p) => p.sku === l.sku);
+            return (
+              <article className="basket-line" key={l.sku}>
+                {p?.details.image && (
+                  <img src={p.details.image} alt="" width="76" height="76" />
+                )}
+                <div>
+                  <h3>{p ? (bn ? p.name_bn : p.name_en) : l.sku}</h3>
+                  <p>
+                    {l.quantity} {p?.unit} · {l.preparation}
+                  </p>
+                  <p>
+                    {p?.price_approved
+                      ? money(lineTotal(p, l), bn)
+                      : t("Price awaits approval", "দাম অনুমোদনের অপেক্ষায়")}
+                  </p>
+                  <label>
+                    {t("Quantity", "পরিমাণ")}
+                    <input
+                      type="number"
+                      min={p?.details.minimum_quantity || 1}
+                      step={p?.details.quantity_step || 1}
+                      max="50"
+                      value={l.quantity}
+                      onChange={(e) =>
+                        writeBasket(
+                          lines.map((i) =>
+                            i.sku === l.sku
+                              ? { ...i, quantity: e.target.value }
+                              : i,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      writeBasket(lines.filter((i) => i.sku !== l.sku))
+                    }
+                  >
+                    {t("Remove", "সরান")}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          <p className="price-line">
+            {t("Item subtotal", "পণ্যের মোট")}: {money(subtotal, bn)}
+          </p>
+          <p>
+            {t(
+              "Delivery and availability are checked at order review.",
+              "অর্ডার পর্যালোচনায় ডেলিভারি ও প্রাপ্যতা যাচাই করা হয়।",
+            )}
+          </p>
+        </section>
+        <div>
+          <GoogleAccess>
+            <CheckoutForm
+              bn={bn}
+              lines={lines}
+              clear={() => {
+                writeBasket([]);
+                setLines([]);
+              }}
+            />
+          </GoogleAccess>
+        </div>
+      </div>
+    </main>
+  );
+}

@@ -6,7 +6,8 @@ COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
 COPY scripts ./scripts
+COPY catalog ./catalog
 RUN pip install --no-cache-dir . && useradd -u 10001 -r -s /usr/sbin/nologin appuser
 USER appuser
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "scripts/start.py"]

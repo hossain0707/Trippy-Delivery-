@@ -18,3 +18,7 @@ __pycache__/
 out/
 *.tsbuildinfo
 *.egg-info/
+
+qa-preview/
+
+node_modules

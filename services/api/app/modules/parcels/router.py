@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import Actor, get_actor
 from app.core.database import get_db
+from app.modules.commerce.service import require_live_orders
 from app.modules.audit.models import write_audit
 from app.modules.locations.service import ensure_parcel_route
 from app.modules.parcels.models import Parcel, ParcelEvent
@@ -28,6 +29,7 @@ def quote(payload: ParcelRequest):
 def book(payload: ParcelRequest, request: Request,
          idempotency_key: str = Header(min_length=8, max_length=120),
          db: Session = Depends(get_db), actor: Actor = Depends(get_actor)):
+    require_live_orders()
     ensure_parcel_route(payload.sender.city, payload.recipient.city)
     digest = hashlib.sha256(json.dumps(payload.model_dump(), sort_keys=True).encode()).hexdigest()
     match = db.scalar(select(Parcel).where(Parcel.customer_id == actor.subject,
@@ -42,14 +44,14 @@ def book(payload: ParcelRequest, request: Request,
         customer_id=actor.subject, idempotency_key=idempotency_key, request_hash=digest,
         tracking_code="TRP" + secrets.token_hex(7).upper(),
         sender=payload.sender.model_dump(), recipient=payload.recipient.model_dump(),
-        package=payload.package.model_dump(), amount_bdt=price.amount,
+        package={**payload.package.model_dump(),"customer_type":payload.customer_type,"pickup_instructions":payload.pickup_instructions}, amount_bdt=price.amount,
         distance_km=price.distance_km, status="created")
-    db.add(parcel)
-    db.flush()
-    db.add(ParcelEvent(parcel_id=parcel.id, actor_id=actor.subject, event_type="created"))
-    write_audit(db, actor_id=actor.subject, action="parcel.created", entity_type="parcel",
-                entity_id=parcel.id, request_id=request.state.request_id)
     try:
+        db.add(parcel)
+        db.flush()
+        db.add(ParcelEvent(parcel_id=parcel.id, actor_id=actor.subject, event_type="created"))
+        write_audit(db, actor_id=actor.subject, action="parcel.created", entity_type="parcel",
+                    entity_id=parcel.id, request_id=request.state.request_id)
         db.commit()
     except IntegrityError:
         db.rollback()

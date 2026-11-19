@@ -28,10 +28,10 @@ def client():
     factory = sessionmaker(engine, expire_on_commit=False)
     with factory() as db:
         db.add(Product(sku="ROHU", name_en="Rohu Fish", name_bn="রুই মাছ",
-                       category="fresh", unit="kg", price_bdt=Decimal("300"),
+                       price_approved=True, category="fresh", unit="kg", price_bdt=Decimal("300"),
                        processing_fee_bdt=Decimal("30"), stock_qty=Decimal("5"), active=True))
         db.add(Product(sku="RICE", name_en="Rice", name_bn="চাল",
-                       category="dry", unit="kg", price_bdt=Decimal("70"),
+                       price_approved=True, category="dry", unit="kg", price_bdt=Decimal("70"),
                        processing_fee_bdt=Decimal("0"), stock_qty=Decimal("10"), active=True))
         db.commit()
 

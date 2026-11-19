@@ -22,6 +22,24 @@ type GoogleIdentity = {
   ): void;
 };
 
+type Session = {
+  profile: Profile | null;
+  credential: string;
+  setProfile: (p: Profile | null) => void;
+  setCredential: (c: string) => void;
+};
+const SessionContext = createContext<Session | null>(null);
+export function SessionProvider({ children }: { children: ReactNode }) {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [credential, setCredential] = useState("");
+  return (
+    <SessionContext.Provider
+      value={{ profile, setProfile, credential, setCredential }}
+    >
+      {children}
+    </SessionContext.Provider>
+  );
+}
 const CredentialContext = createContext("");
 export const useCredential = () => useContext(CredentialContext);
 
@@ -34,8 +52,15 @@ export function GoogleAccess({
 }) {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const button = useRef<HTMLDivElement>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [credential, setCredential] = useState("");
+  const session = useContext(SessionContext);
+  const [localProfile, localSetProfile] = useState<Profile | null>(null);
+  const [localCredential, localSetCredential] = useState("");
+  const { profile, setProfile, credential, setCredential } = session || {
+    profile: localProfile,
+    setProfile: localSetProfile,
+    credential: localCredential,
+    setCredential: localSetCredential,
+  };
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -70,6 +95,17 @@ export function GoogleAccess({
     <>
       <section className="panel">
         <h2>{admin ? "Administrator sign-in" : "Google account"}</h2>
+        {process.env.NEXT_PUBLIC_INTERNAL_QA === "true" && !profile && (
+          <div>
+            <p>Isolated internal QA — no live orders or payments</p>
+            <button onClick={() => void signIn("qa-customer")}>
+              Use isolated customer
+            </button>
+            <button onClick={() => void signIn("qa-owner")}>
+              Use isolated owner
+            </button>
+          </div>
+        )}
         {clientId ? (
           <>
             <Script
@@ -103,6 +139,11 @@ export function GoogleAccess({
           <p>Google sign-in is unavailable on this deployment.</p>
         )}
         <p role="status">{busy ? "Verifying your Google account…" : status}</p>
+        {admin && profile && !profile.is_admin && (
+          <p role="alert">
+            This Google account does not have administrator access.
+          </p>
+        )}
         {profile && (
           <div>
             <p>

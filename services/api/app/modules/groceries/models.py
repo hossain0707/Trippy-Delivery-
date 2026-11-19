@@ -20,6 +20,8 @@ class Product(Base):
     price_bdt: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     processing_fee_bdt: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     stock_qty: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
+    price_approved: Mapped[bool] = mapped_column(default=False, nullable=False)
+    details: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), default=dict, nullable=False)
     active: Mapped[bool] = mapped_column(nullable=False, default=True)
 
 
@@ -31,6 +33,12 @@ class GroceryOrder(Base):
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     customer_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    order_number: Mapped[str | None] = mapped_column(String(45), unique=True, nullable=True)
+    payment_method: Mapped[str] = mapped_column(String(20), default="cod", nullable=False)
+    payment_status: Mapped[str] = mapped_column(String(30), default="unpaid", nullable=False)
+    delivery_fee_bdt: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
+    checkout_data: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), default=dict, nullable=False)
+    courier_id: Mapped[str | None] = mapped_column(ForeignKey("delivery_partners.id"), nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String(120), nullable=False)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     destination: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=False)
