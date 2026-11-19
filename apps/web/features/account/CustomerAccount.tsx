@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { GoogleAccess, useCredential } from "./GoogleAccess";
+import { editableProfile } from "@/lib/profile.mjs";
 import { authApi } from "@/lib/auth-api";
 type Profile = { name: string; phone: string; language: "en" | "bn" };
 type RecordItem = {
@@ -54,7 +55,7 @@ function Records() {
                     token,
                     "/account/profile",
                     "PUT",
-                    profile,
+                    editableProfile(profile),
                   ),
                 );
                 setStatus(bn ? "সংরক্ষিত" : "Profile saved");
