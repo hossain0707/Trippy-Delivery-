@@ -56,7 +56,7 @@ async def preview_write_guard(request: Request, call_next):
                 content={"detail": "TRIPPY Delivery read-only preview: orders are disabled."},
             )
     response = await call_next(request)
-    if request.url.path.startswith(("/api/v1/account", "/api/v1/admin", "/api/v1/parcels/")):
+    if request.url.path.startswith(("/api/v1/account", "/api/v1/admin", "/api/v1/parcels/", "/api/v1/commerce")):
         response.headers["Cache-Control"] = "no-store"
     return response
 

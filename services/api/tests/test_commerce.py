@@ -421,3 +421,10 @@ def test_transfer_configuration_is_never_mistaken_for_payment(client):
     for method in ['bkash','nagad','rocket','bank']:
         assert not c['payments'][method]['enabled']
         assert 'Do not send' in c['payments'][method]['instructions']
+
+
+def test_customer_commerce_responses_cannot_be_cached(client):
+    browser, _ = client
+    response = browser.get("/api/v1/commerce/cart")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
