@@ -26,6 +26,7 @@ class Parcel(Base):
     package: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=False)
     amount_bdt: Mapped[int] = mapped_column(Integer, nullable=False)
     distance_km: Mapped[float] = mapped_column(Numeric(8, 2), nullable=False)
+    courier_id: Mapped[str | None] = mapped_column(ForeignKey("delivery_partners.id"), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="created", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 

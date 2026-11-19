@@ -64,7 +64,7 @@ def google_actor(token: str, config: Settings) -> Actor:
         if not isinstance(subject, str) or not subject or len(subject) > 100:
             raise ValueError("Invalid Google subject")
         roles = {"customer"}
-        if config.google_admin_email and email.lower() == config.google_admin_email.strip().lower():
+        if config.google_admin_email and (not config.google_admin_subject or subject == config.google_admin_subject) and email.lower() == config.google_admin_email.strip().lower():
             roles.add("admin")
         name = claims.get("name")
         return Actor(f"google:{subject}", frozenset(roles), email, name if isinstance(name, str) else None)

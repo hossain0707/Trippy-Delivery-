@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     jwt_jwks_url: str | None = None
     google_client_id: str | None = None
     google_admin_email: str | None = None
+    google_admin_subject: str | None = None
     active_cities: str = "dhaka"
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -1,0 +1,36 @@
+name: Application checks
+on:
+  push:
+    branches: [main, feat/persistent-operations]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e 'services/api[dev]'
+      - run: pytest -q services/api/tests
+        env:
+          APP_ENV: test
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app

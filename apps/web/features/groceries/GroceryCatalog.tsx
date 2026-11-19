@@ -49,9 +49,9 @@ const asSoldOnly = new Set(["EGGS", "PRAWNS", "BEEF-MINCE", "DRUMSTICKS", "JACKF
 export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
   const t = (en: string, bangla: string) => bn ? bangla : en;
   const [products, setProducts] = useState<readonly Product[]>([]);
-  const [status, setStatus] = useState<"loading" | "live" | "sample">("loading");
+  const [status, setStatus] = useState<"loading" | "live" | "error">("loading");
   const [category, setCategory] = useState<"fresh" | "dry">("fresh");
-  const [department, setDepartment] = useState<Department | undefined>("vegetables");
+  const [department, setDepartment] = useState<Department | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(12);
   const [choices, setChoices] = useState<Record<string, Prep>>({});
@@ -61,7 +61,7 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
     apiGet<Product[]>("/api/v1/groceries/products").then(items => {
       if (active) { setProducts(items); setStatus("live"); }
     }).catch(() => {
-      if (active) { setProducts(previewCatalog); setStatus("sample"); }
+      if (active) { setProducts([]); setStatus("error"); }
     });
     return () => { active = false; };
   }, []);
@@ -97,7 +97,7 @@ export function GroceryCatalog({ bn = false }: { bn?: boolean }) {
             <span>{departments[d][bn ? 1 : 0]}</span></button>)}
       </div>}
       {status === "loading" && <p role="status">{t("Loading groceries…", "পণ্য লোড হচ্ছে…")}</p>}
-      {status === "sample" && <p role="status">{t("Sample catalog · Live inventory is temporarily unavailable.", "নমুনা পণ্য · লাইভ স্টক এখন পাওয়া যাচ্ছে না।")}</p>}
+      {status === "error" && <p role="status">{t("Catalog unavailable · Live inventory is temporarily unavailable.", "পণ্যের তালিকা এখন পাওয়া যাচ্ছে না।")}</p>}
       {status !== "loading" && shown.length === 0 && <p>{t("No matching groceries.", "মিলেছে এমন পণ্য নেই।")}</p>}
       {status !== "loading" && shown.length > 0 && <h3 className="shelf-heading">{search.trim() ? t("Search results", "খোঁজার ফলাফল") : department ? departments[department][bn ? 1 : 0] : category === "fresh" ? t("All Fresh groceries", "সব তাজা পণ্য") : t("All Dry groceries & essentials", "সব শুকনা ও নিত্যপ্রয়োজনীয় পণ্য")} <small>{shown.length.toLocaleString(bn ? "bn-BD" : "en-BD")} {t("products", "পণ্য")}</small></h3>}
       <div className="cards">{shown.slice(0, limit).map(p => {

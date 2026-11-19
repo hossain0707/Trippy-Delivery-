@@ -57,7 +57,7 @@ def checkout(payload: Checkout, request: Request,
         if product.stock_qty < item.quantity:
             raise HTTPException(409, "Insufficient stock: " + item.sku)
         product.stock_qty -= item.quantity
-        fee = product.processing_fee_bdt if item.preparation in ("cleaned", "cut") else Decimal("0")
+        fee = product.processing_fee_bdt if item.preparation in ("cleaned", "cut", "cut-only") else Decimal("0")
         amount = (product.price_bdt + fee) * item.quantity
         total += amount
         lines.append(GroceryLine(sku=item.sku, quantity=item.quantity,
