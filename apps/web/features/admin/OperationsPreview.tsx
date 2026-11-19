@@ -12,6 +12,8 @@ type Product = {
   processing_fee_bdt: string;
   stock_qty: string;
   active: boolean;
+  price_approved?: boolean;
+  details?: Record<string, unknown>;
 };
 const blank: Product = {
   sku: "",
@@ -23,6 +25,7 @@ const blank: Product = {
   processing_fee_bdt: "0",
   stock_qty: "0",
   active: true,
+  price_approved: false,
 };
 export function OperationsPreview() {
   const token = useCredential();
@@ -234,6 +237,16 @@ export function OperationsPreview() {
                 />
               </label>
             </div>
+            <label>
+              <input
+                type="checkbox"
+                checked={product.price_approved || false}
+                onChange={(e) =>
+                  setProduct({ ...product, price_approved: e.target.checked })
+                }
+              />
+              Actual selling price approved by owner
+            </label>
             <button className="primary">Save product</button>
           </form>
           {Array.isArray(data) &&

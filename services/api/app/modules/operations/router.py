@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.auth import Actor, get_actor, require_admin
@@ -15,6 +16,8 @@ from app.modules.couriers.models import DeliveryPartner
 from app.modules.groceries.models import GroceryLine, GroceryOrder, Product
 from app.modules.operations.models import CustomerProfile
 from app.modules.parcels.models import Parcel, ParcelEvent
+from app.modules.commerce.schemas import CatalogContent
+from app.modules.commerce.service import require_live_orders
 
 router = APIRouter()
 admin = APIRouter(prefix="/admin", dependencies=[Depends(require_admin)])
@@ -37,17 +40,19 @@ class ProductEdit(BaseModel):
     processing_fee_bdt: Decimal = Field(ge=0, le=1000000, decimal_places=2)
     stock_qty: Decimal = Field(ge=0, le=1000000, decimal_places=3)
     active: bool = True
+    price_approved: bool = False
+    details: CatalogContent = Field(default_factory=CatalogContent)
 
 
 def row(value):
-    return {
-        c.name: (
-            str(getattr(value, c.name))
-            if isinstance(getattr(value, c.name), Decimal)
-            else getattr(value, c.name)
-        )
-        for c in value.__table__.columns
-    }
+    from zoneinfo import ZoneInfo
+    def normalized(column):
+        data=getattr(value,column)
+        if isinstance(data,datetime) and data.tzinfo is None:
+            return data.replace(tzinfo=ZoneInfo("Asia/Dhaka") if column=="delivery_deadline" else UTC)
+        return str(data) if isinstance(data,Decimal) else data
+    return {c.name:normalized(c.name) for c in value.__table__.columns}
+
 
 
 def profile(db, actor):
@@ -57,7 +62,12 @@ def profile(db, actor):
             subject=actor.subject, email=actor.email, name=(actor.name or "")[:120]
         )
         db.add(value)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            value=db.get(CustomerProfile,actor.subject)
+            if value is None:raise
     return value
 
 
@@ -160,13 +170,15 @@ def save_product(
 ):
     if not 1 <= len(sku) <= 50:
         raise HTTPException(422, "Invalid SKU")
-    if payload.category == "dry" and payload.processing_fee_bdt != 0:
+    if payload.price_approved and payload.price_bdt <= 0:
+        raise HTTPException(422,"An approved product must have a positive selling price")
+    if payload.category == "dry" and (payload.processing_fee_bdt != 0 or payload.details.preparation_options):
         raise HTTPException(422, "Dry groceries cannot have preparation fees")
     product = db.scalar(select(Product).where(Product.sku == sku).with_for_update())
     if product is None:
         product = Product(sku=sku)
         db.add(product)
-    for key, value in payload.model_dump().items():
+    for key, value in payload.model_dump(mode="json").items():
         setattr(product, key, value)
     write_audit(
         db,
@@ -206,6 +218,7 @@ class OrderStatus(BaseModel):
 
 
 def fulfillment_guard():
+    require_live_orders()
     if settings().app_env == "preview":
         raise HTTPException(503, "Preview fulfillment is disabled")
 
@@ -222,7 +235,7 @@ def assign(
     courier = db.get(DeliveryPartner, payload.courier_id)
     if parcel is None:
         raise HTTPException(404, "Parcel not found")
-    if courier is None or courier.status != "approved":
+    if courier is None or courier.status != "approved" or (settings().app_env not in ("test","local") and not (courier.details.get("active") and courier.details.get("identity_verified") and courier.details.get("documents_verified") and parcel.sender["city"].lower() in [c.lower() for c in courier.details.get("service_cities",[])])):
         raise HTTPException(422, "An approved courier is required")
     if parcel.status not in ("created", "assigned"):
         raise HTTPException(409, "Parcel cannot be assigned in this state")
@@ -274,6 +287,8 @@ def order_status(
     db: Annotated[Session, Depends(get_db)],
     actor: Annotated[Actor, Depends(require_admin)],
 ):
+    if settings().app_env not in ("local","test"):
+        raise HTTPException(409,"Use the reviewed commerce fulfillment workflow")
     order = db.scalar(select(GroceryOrder).where(GroceryOrder.id == order_id).with_for_update())
     if order is None:
         raise HTTPException(404, "Order not found")

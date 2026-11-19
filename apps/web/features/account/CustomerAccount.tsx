@@ -115,7 +115,7 @@ function Records() {
         )}
         {history.orders.map((o) => (
           <p key={o.id}>
-            {o.id} · {o.status} · ৳{o.amount_bdt}
+            <Link href={"/orders?id="+o.id}>{o.id}</Link> · {o.status} · ৳{o.amount_bdt}
           </p>
         ))}
         <h2>{bn ? "পার্সেল ট্র্যাকিং" : "Parcel tracking"}</h2>
