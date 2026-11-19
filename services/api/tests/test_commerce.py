@@ -326,6 +326,7 @@ def test_simulated_payments_restricted_to_test_environment(client, monkeypatch):
         "receipt_reference": "SIMULATED-RECEIPT",
         "simulate": True,
     }
+    monkeypatch.setattr("app.modules.commerce.router.settings", lambda: Settings(app_env="local"))
     assert browser.post(path, json=payload).status_code == 403
     monkeypatch.setattr("app.modules.commerce.router.settings", lambda: Settings(app_env="test"))
     assert browser.post(path, json=payload).json()["payment_status"] == "test_paid"
