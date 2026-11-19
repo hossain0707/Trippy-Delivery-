@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.core.auth import Actor, get_actor, require_admin
+from app.core.auth import Actor, get_actor
 from app.core.config import settings
 from app.core.database import is_ready
 from app.core.observability import RequestAuditMiddleware, configure_logs
@@ -54,14 +54,6 @@ app.include_router(operations, prefix="/api/v1")
 def account(actor: Actor = Depends(get_actor)):
     return JSONResponse(
         {"name": actor.name, "email": actor.email, "is_admin": "admin" in actor.roles},
-        headers={"Cache-Control": "no-store"},
-    )
-
-
-@app.get("/api/v1/admin/session", tags=["Admin"])
-def admin_session(actor: Actor = Depends(require_admin)):
-    return JSONResponse(
-        {"name": actor.name, "email": actor.email, "is_admin": True},
         headers={"Cache-Control": "no-store"},
     )
 

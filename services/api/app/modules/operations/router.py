@@ -126,6 +126,11 @@ def dashboard(db: Annotated[Session, Depends(get_db)]):
     }
 
 
+@admin.get("/session")
+def admin_session(actor: Annotated[Actor, Depends(require_admin)]):
+    return {"name": actor.name, "email": actor.email, "is_admin": True}
+
+
 @admin.get("/{collection}")
 def records(collection: str, db: Annotated[Session, Depends(get_db)], offset: int = Query(0, ge=0)):
     model = {

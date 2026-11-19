@@ -266,3 +266,13 @@ def test_anonymous_access_rejected(client):
     app.dependency_overrides.pop(get_actor)
     for path in ["/account/profile", "/account/history", "/admin/dashboard", "/admin/products"]:
         assert browser.get("/api/v1" + path).status_code == 401
+
+
+def test_admin_session_route_precedes_collection_route(client):
+    browser, _ = client
+    assert browser.get("/api/v1/admin/session").status_code == 403
+    owner()
+    response = browser.get("/api/v1/admin/session")
+    assert response.status_code == 200
+    assert response.json()["is_admin"] is True
+    assert response.json()["email"] == "owner@example.com"
