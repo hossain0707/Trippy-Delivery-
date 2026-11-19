@@ -14,3 +14,7 @@ __pycache__/
 *.pyc
 *.log
 .DS_Store
+
+out/
+*.tsbuildinfo
+*.egg-info/

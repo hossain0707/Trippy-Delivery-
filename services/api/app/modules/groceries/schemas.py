@@ -15,7 +15,7 @@ class Recipient(BaseModel):
 class CartItem(BaseModel):
     sku: str = Field(min_length=1, max_length=50)
     quantity: Decimal = Field(gt=0, le=50, decimal_places=3)
-    preparation: Literal["none", "whole", "cleaned", "cut"] = "none"
+    preparation: Literal["none", "whole", "cleaned", "cut", "cut-only"] = "none"
 
 
 class Checkout(BaseModel):

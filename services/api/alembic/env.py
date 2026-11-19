@@ -3,6 +3,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.core.database import Base
+from app.modules.operations import models as operations_models
 from app.modules.audit import models as audit_models
 from app.modules.couriers import models as courier_models
 from app.modules.groceries import models as grocery_models
