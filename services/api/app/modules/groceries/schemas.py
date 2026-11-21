@@ -15,6 +15,7 @@ class Recipient(BaseModel):
 
 
 class CartItem(BaseModel):
+    preparation_weight_kg: Decimal | None = Field(default=None, gt=0, le=50, decimal_places=3)
     sku: str = Field(min_length=1, max_length=50)
     quantity: Decimal = Field(gt=0, le=50, decimal_places=3)
     preparation: Literal["none", "whole", "cleaned", "cut", "cut-only", "custom"] = "none"

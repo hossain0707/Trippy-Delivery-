@@ -650,6 +650,43 @@ export function BasketCheckout() {
                       </select>
                     </label>
                   )}
+                  {p &&
+                    p.unit !== "kg" &&
+                    preparationOptions(p).some(
+                      (o) => o.id === l.preparation && o.fee_unit === "kg",
+                    ) && (
+                      <label>
+                        {t(
+                          "Total preparation weight (kg)",
+                          "প্রস্তুতির মোট ওজন (কেজি)",
+                        )}
+                        <input
+                          type="number"
+                          min="0.001"
+                          step="0.001"
+                          max="50"
+                          value={l.preparation_weight_kg || ""}
+                          onChange={(e) =>
+                            writeBasket(
+                              lines.map((i) =>
+                                i.sku === l.sku
+                                  ? {
+                                      ...i,
+                                      preparation_weight_kg: e.target.value,
+                                    }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
+                        <small>
+                          {t(
+                            "Enter the total weight to calculate the per-kg preparation charge.",
+                            "প্রতি কেজির প্রস্তুতি খরচ হিসাব করতে মোট ওজন দিন।",
+                          )}
+                        </small>
+                      </label>
+                    )}
                   <button
                     className="text-button"
                     onClick={() =>

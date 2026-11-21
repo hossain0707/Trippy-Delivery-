@@ -303,3 +303,52 @@ def test_cut_only_uses_distinct_tariff(client, monkeypatch):
         assert r["total_bdt"] == "690.00"
     finally:
         settings.cache_clear()
+
+
+def test_non_kg_preparation_uses_explicit_weight_not_piece_count(client, monkeypatch):
+    browser, factory = setup(client, monkeypatch)
+    try:
+        with factory() as db:
+            p = db.get(Product, "ROHU")
+            p.unit = "piece"
+            db.commit()
+        body = request_body()
+        body["items"][0]["preparation"] = "cleaned"
+        missing = browser.post("/api/v1/commerce/review", json=body).json()
+        assert missing["total_bdt"] is None
+        body["items"][0]["preparation_weight_kg"] = "1.5"
+        result = browser.post("/api/v1/commerce/review", json=body).json()
+        assert result["preparation_fee_bdt"] == "15.00"
+        assert result["total_bdt"] == "675.00"
+        body["items"][0]["preparation_weight_kg"] = "0"
+        assert browser.post("/api/v1/commerce/review", json=body).status_code == 422
+    finally:
+        settings.cache_clear()
+
+
+def test_catalog_labels_and_units_match_current_selling_unit(client, monkeypatch):
+    browser, factory = setup(client, monkeypatch)
+    try:
+        with factory() as db:
+            p = db.get(Product, "ROHU")
+            p.unit = "piece"
+            p.details = {
+                **p.details,
+                "department": "fish",
+                "description_en": f"{p.name_en} for your everyday Bangladeshi kitchen. Sold by kg; final packaging and availability are confirmed by TRIPPY.",
+                "preparation_options": [
+                    {
+                        "id": "whole",
+                        "name_en": "As sold",
+                        "name_bn": "মূল",
+                        "fee_bdt": "0",
+                        "enabled": True,
+                    }
+                ],
+            }
+            db.commit()
+        result = browser.get("/api/v1/groceries/products/ROHU").json()
+        assert "Sold by piece" in result["details"]["description_en"]
+        assert result["details"]["preparation_options"][0]["name_en"] == "Whole / unprepared"
+    finally:
+        settings.cache_clear()

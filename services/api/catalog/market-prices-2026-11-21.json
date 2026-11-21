@@ -370,6 +370,618 @@
       "source_name": "Chaldal Dhaka retail listing",
       "checked_on": "2026-11-21",
       "basis": "Aarong pasteurized liquid milk, 1 litre"
+    },
+    {
+      "sku": "FISH-ROHU",
+      "amount_bdt": "380",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Raw local Rohu, medium fish 1.5–2.5 kg; price per kg"
+    },
+    {
+      "sku": "FISH-HILSA",
+      "amount_bdt": "2750",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Fresh Hilsa, fish 1.2 kg and larger; price per kg"
+    },
+    {
+      "sku": "FISH-KATLA",
+      "amount_bdt": "410",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Local Katla, fish 2.5–3.5 kg; price per kg"
+    },
+    {
+      "sku": "FISH-TILAPIA",
+      "amount_bdt": "230",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Tilapia, fish around 400 g; price per kg"
+    },
+    {
+      "sku": "FISH-PANGAS",
+      "amount_bdt": "200",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Pond Pangas, medium fish around 1.5 kg; price per kg"
+    },
+    {
+      "sku": "MUTTON",
+      "amount_bdt": "1350",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Mutton bone-in premium; per kg"
+    },
+    {
+      "sku": "MOLA",
+      "amount_bdt": "450",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Mola carplet fish; per kg"
+    },
+    {
+      "sku": "MRIGAL",
+      "amount_bdt": "450",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Mrigal, fish 3–5 kg; price per kg"
+    },
+    {
+      "sku": "SHING",
+      "amount_bdt": "450",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Shing fish, 20–25 fish per kg"
+    },
+    {
+      "sku": "PABDA",
+      "amount_bdt": "440",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Pabda, 26–40 fish per kg"
+    },
+    {
+      "sku": "BOAL",
+      "amount_bdt": "700",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Imported Boal, fish 1.2–2 kg; price per kg"
+    },
+    {
+      "sku": "SHRIMP",
+      "amount_bdt": "800",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Chingri gura, little shrimp; per kg"
+    },
+    {
+      "sku": "DAL",
+      "amount_bdt": "159",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/dal-or-lentil",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Local masoor lentils, 1 kg"
+    },
+    {
+      "sku": "MOONG",
+      "amount_bdt": "178",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/dal-or-lentil",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Mug dal, BDT 89 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "CHICKPEAS",
+      "amount_bdt": "109",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/dal-or-lentil",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Chola boot chickpeas, 1 kg"
+    },
+    {
+      "sku": "CHOLA-DAL",
+      "amount_bdt": "118",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/dal-or-lentil",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Boot dal, BDT 59 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "ATTA",
+      "amount_bdt": "70",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/flour",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Whole wheat atta: Teer 2 kg pack BDT 140; per kg equivalent"
+    },
+    {
+      "sku": "FLOUR",
+      "amount_bdt": "59",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/flour",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "White flour maida, 1 kg"
+    },
+    {
+      "sku": "OIL",
+      "amount_bdt": "199",
+      "unit": "L",
+      "source_url": "https://chaldal.com/popular",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Teer fortified soybean oil, 1 litre bottle"
+    },
+    {
+      "sku": "SUGAR",
+      "amount_bdt": "110",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/popular",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Fresh refined sugar, 1 kg"
+    },
+    {
+      "sku": "VEG-ONION",
+      "amount_bdt": "39",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/popular",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Local onion, 1 kg"
+    },
+    {
+      "sku": "MURI",
+      "amount_bdt": "150",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/popular",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Pran puffed rice, BDT 75 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "TURMERIC",
+      "amount_bdt": "725",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/popular",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Radhuni turmeric powder, BDT 145 per 200 g; per kg equivalent"
+    },
+    {
+      "sku": "CHILI-POWDER",
+      "amount_bdt": "140",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/popular",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Radhuni chilli powder, 200 g pack"
+    },
+    {
+      "sku": "CUMIN",
+      "amount_bdt": "85",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/popular",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Cumin seeds, 100 g pack"
+    },
+    {
+      "sku": "DETERGENT",
+      "amount_bdt": "195",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/popular",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Rin Advanced detergent powder, 1 kg pack"
+    },
+    {
+      "sku": "VEG-OKRA",
+      "amount_bdt": "140",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/vegetables",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Okra, BDT 70 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "CABBAGE",
+      "amount_bdt": "45",
+      "unit": "piece",
+      "source_url": "https://agorasuperstores.com/products/vegetables",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Small cabbage, one piece"
+    },
+    {
+      "sku": "CARROT",
+      "amount_bdt": "90",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/vegetables",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Local carrots, per kg"
+    },
+    {
+      "sku": "POINTED-GOURD",
+      "amount_bdt": "50",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/vegetables",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Pointed gourd potol, per kg"
+    },
+    {
+      "sku": "RIDGE-GOURD",
+      "amount_bdt": "80",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/vegetables",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Ribbed gourd jhinga, per kg"
+    },
+    {
+      "sku": "BEANS",
+      "amount_bdt": "85",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/vegetables",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Hyacinth flat beans, per kg"
+    },
+    {
+      "sku": "LONG-BEANS",
+      "amount_bdt": "210",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/vegetables",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Yardlong beans, BDT 105 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "AMARANTH",
+      "amount_bdt": "18",
+      "unit": "bundle",
+      "source_url": "https://agorasuperstores.com/products/vegetables",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Green amaranth data shak, one bundle 200 g or larger"
+    },
+    {
+      "sku": "DUCK",
+      "amount_bdt": "840",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/poultry",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Fresh duck, per kg; reference retailer currently out of stock"
+    },
+    {
+      "sku": "DRUMSTICKS",
+      "amount_bdt": "490",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/poultry",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Chicken drumsticks skin on, per kg"
+    },
+    {
+      "sku": "PRAWNS",
+      "amount_bdt": "825",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/category/fish-meat",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Golda prawns, 31–45 prawns per kg"
+    },
+    {
+      "sku": "WATERMELON",
+      "amount_bdt": "359",
+      "unit": "piece",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Large watermelon 5 kg or larger, one whole fruit"
+    },
+    {
+      "sku": "LYCHEE",
+      "amount_bdt": "279",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Premium lychees, 50 pieces"
+    },
+    {
+      "sku": "POMEGRANATE",
+      "amount_bdt": "269",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Pomegranates, 2 pieces"
+    },
+    {
+      "sku": "YOGURT",
+      "amount_bdt": "240",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/aarongdairy",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Aarong Dairy sour curd, BDT 120 per 500 g; per kg equivalent"
+    },
+    {
+      "sku": "GHEE",
+      "amount_bdt": "390",
+      "unit": "jar",
+      "source_url": "https://chaldal.com/aarongdairy",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Aarong Dairy pure ghee, 200 g jar"
+    },
+    {
+      "sku": "BUTTER",
+      "amount_bdt": "270",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/aarongdairy",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Aarong Dairy butter, 200 g"
+    },
+    {
+      "sku": "CHEESE",
+      "amount_bdt": "190",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/aarongdairy",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Aarong Dairy Austagram cheese, 200 g"
+    },
+    {
+      "sku": "CORIANDER-POWDER",
+      "amount_bdt": "110",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/spices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Radhuni coriander powder, 200 g"
+    },
+    {
+      "sku": "CARDAMOM",
+      "amount_bdt": "75",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/spices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Whole cardamom, 25 g"
+    },
+    {
+      "sku": "CLOVES",
+      "amount_bdt": "89",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/spices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Cloves, 50 g"
+    },
+    {
+      "sku": "BAY-LEAVES",
+      "amount_bdt": "55",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/spices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Golden Grain bay leaves, 100 g"
+    },
+    {
+      "sku": "SEMOLINA",
+      "amount_bdt": "96",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Fresh suji semolina, BDT 48 per 500 g; per kg equivalent"
+    },
+    {
+      "sku": "BUNS",
+      "amount_bdt": "90",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/bread-pit-hot-dog-roll-200-gm",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Bread Pit hot dog rolls, 200 g pack containing 4 rolls; reference retailer currently requests stock"
+    },
+    {
+      "sku": "CLEANER",
+      "amount_bdt": "255",
+      "unit": "L",
+      "source_url": "https://chaldal.com/shinex-floor-cleaner-citrus-free-10-ltr-bucket-1-ltr",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Shinex citrus floor cleaner, 1 litre; reference retailer currently requests stock"
+    },
+    {
+      "sku": "SOAP",
+      "amount_bdt": "30",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/laundry",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Wheel washing laundry bar, 125 g"
+    },
+    {
+      "sku": "BISCUITS",
+      "amount_bdt": "50",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/plain-biscuits",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Olympic Energy Plus biscuits, 185 g"
+    },
+    {
+      "sku": "SNACKS",
+      "amount_bdt": "50",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/local-snacks",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Ruchi jhal chanachur, 150 g"
+    },
+    {
+      "sku": "WATER",
+      "amount_bdt": "30",
+      "unit": "L",
+      "source_url": "https://chaldal.com/water",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Aquafina drinking water, 1 litre bottle"
+    },
+    {
+      "sku": "BREAD",
+      "amount_bdt": "70",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/breads",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "White sliced bread, 500 g"
+    },
+    {
+      "sku": "BEVERAGE",
+      "amount_bdt": "90",
+      "unit": "L",
+      "source_url": "https://chaldal.com/juice",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Frutika mango juice, 1 litre"
+    },
+    {
+      "sku": "MUSTARD-OIL",
+      "amount_bdt": "380",
+      "unit": "L",
+      "source_url": "https://chaldal.com/oil",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Radhuni pure mustard oil, 1 litre"
+    },
+    {
+      "sku": "COFFEE",
+      "amount_bdt": "275",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/nestle-nescafe-classic-instant-coffee-jar-45-gm",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Nescafe Classic coffee, 45 g jar"
+    },
+    {
+      "sku": "NOODLES",
+      "amount_bdt": "20",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/cocola-egg-noodles-125-gm",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Cocola egg noodles, 125 g pack"
+    },
+    {
+      "sku": "TENGRA",
+      "amount_bdt": "697.50",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/frozen-fish",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Deshi Tengra, BDT 279 per 400 g; per kg equivalent"
+    },
+    {
+      "sku": "MAGUR",
+      "amount_bdt": "650",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/fish",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Magur fish, 1 kg"
+    },
+    {
+      "sku": "PEPPER",
+      "amount_bdt": "79",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/spices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Whole black pepper, 50 g pack"
+    },
+    {
+      "sku": "MANGO",
+      "amount_bdt": "160",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/fruits",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Ashinee mango, per kg"
+    },
+    {
+      "sku": "JUJUBE",
+      "amount_bdt": "280",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/fruits",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Green sour boroi jujube, per kg"
+    },
+    {
+      "sku": "JACKFRUIT",
+      "amount_bdt": "55",
+      "unit": "kg",
+      "source_url": "https://agorasuperstores.com/products/fruits",
+      "source_name": "Agora Bangladesh retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Ripe whole jackfruit, per kg"
+    },
+    {
+      "sku": "FISH-KOI",
+      "amount_bdt": "380",
+      "unit": "kg",
+      "source_url": "https://quickybd.com/products/koi-fish-1kg-whole-mach/",
+      "source_name": "QuickyBD Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Whole large Koi fish, 1 kg; retailer listing checked, not a live feed"
+    },
+    {
+      "sku": "TISSUE",
+      "amount_bdt": "160",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/kitchen-accessories",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Bashundhara kitchen towel rolls, 2 pieces"
     }
   ]
 }

@@ -4,6 +4,7 @@ export type Preparation = {
   name_en: string;
   name_bn: string;
   fee_bdt: string;
+  fee_unit?: "selling_unit" | "kg";
   enabled: boolean;
   yield_percent: number;
   image: string;
@@ -52,7 +53,12 @@ export type Product = {
     } | null;
   };
 };
-export type BasketLine = { sku: string; quantity: string; preparation: string };
+export type BasketLine = {
+  sku: string;
+  quantity: string;
+  preparation: string;
+  preparation_weight_kg?: string;
+};
 export type Configuration = {
   preview_checkout?: boolean;
   ordering_open: boolean;

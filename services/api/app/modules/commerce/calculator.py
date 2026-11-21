@@ -55,14 +55,16 @@ def preparation_options(product, pilot):
                 }
             )
     for o in options:
-        if (
-            not o.get("enabled")
-            and o["id"] in ("cleaned", "cut-only", "cut")
-            and product.unit == "kg"
-        ):
+        if o.get("name_en") == "As sold":
+            raw = product.details.get("department") in ("vegetables", "fruit", "fish", "meat")
+            o.update(
+                name_en="Whole / unprepared" if raw else "Original pack",
+                name_bn="আস্ত / অপ্রস্তুত" if raw else "মূল প্যাকেট",
+            )
+        if not o.get("enabled") and o["id"] in ("cleaned", "cut-only", "cut"):
             rate = getattr(pilot, "preparation_" + o["id"].replace("-", "_") + "_fee_bdt")
             if rate is not None:
-                o.update(fee_bdt=str(rate), enabled=True)
+                o.update(fee_bdt=str(rate), enabled=True, fee_unit="kg")
         # No generated preparation photos; keep only verified real product photos.
         if not product.details.get("images_approved"):
             o["image"] = ""
@@ -102,8 +104,15 @@ def calculate(payload, db):
         if option and not option.get("enabled"):
             pending.append(p.name_en + ": preparation fee is not set")
         base = (p.price_bdt * item.quantity).quantize(Decimal(".01")) if priced else Decimal(0)
+        preparation_quantity = item.quantity
+        if option and option.get("fee_unit") == "kg" and p.unit != "kg":
+            if item.preparation_weight_kg is None:
+                pending.append(p.name_en + ": enter preparation weight in kg")
+                preparation_quantity = Decimal(0)
+            else:
+                preparation_quantity = item.preparation_weight_kg
         fee = (
-            (Decimal(str(option["fee_bdt"])) * item.quantity).quantize(Decimal(".01"))
+            (Decimal(str(option["fee_bdt"])) * preparation_quantity).quantize(Decimal(".01"))
             if option and option.get("enabled")
             else Decimal(0)
         )
@@ -117,6 +126,7 @@ def calculate(payload, db):
                 "unit": p.unit,
                 "quantity": str(item.quantity),
                 "preparation": item.preparation,
+                "preparation_weight_kg": str(preparation_quantity),
                 "base_amount_bdt": str(base),
                 "preparation_fee_bdt": str(fee),
                 "amount_bdt": str(base + fee),

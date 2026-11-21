@@ -371,7 +371,7 @@ def test_catalog_import_is_idempotent_and_never_invents_stock(client):
         result = module.import_catalog(db)
         assert result["total_source"] >= 100
         p = db.get(Product, "MRIGAL")
-        assert not p.price_approved and p.stock_qty == 0 and p.price_bdt == 0
+        assert p.price_approved and p.stock_qty == 0 and p.price_bdt == 450
         p.name_en = "Owner edited name"
         db.commit()
         assert module.import_catalog(db)["added"] == 0

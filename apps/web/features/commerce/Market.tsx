@@ -316,7 +316,9 @@ export function Market({
                             ? t(" — fee not set", " — ফি নির্ধারিত হয়নি")
                             : ""}{" "}
                           {o.enabled && Number(o.fee_bdt) > 0
-                            ? "+ " + money(o.fee_bdt, bn)
+                            ? "+ " +
+                              money(o.fee_bdt, bn) +
+                              (o.fee_unit === "kg" ? "/kg" : "/" + p.unit)
                             : ""}
                         </option>
                       ))}

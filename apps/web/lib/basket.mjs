@@ -28,8 +28,12 @@ export function lineTotal(product, line) {
   const option = product.details?.preparation_options?.find(
     (o) => o.id === line.preparation && o.enabled,
   );
+  const weight =
+    option?.fee_unit === "kg" && product.unit !== "kg"
+      ? Number(line.preparation_weight_kg || 0)
+      : Number(line.quantity);
   return (
-    (Number(product.price_bdt) + Number(option?.fee_bdt || 0)) *
-    Number(line.quantity)
+    Number(product.price_bdt) * Number(line.quantity) +
+    Number(option?.fee_bdt || 0) * weight
   );
 }
