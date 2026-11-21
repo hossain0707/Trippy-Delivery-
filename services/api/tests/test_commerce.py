@@ -429,3 +429,51 @@ def test_customer_commerce_responses_cannot_be_cached(client):
     response = browser.get("/api/v1/commerce/cart")
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
+
+
+def test_market_prices_preserve_stock_and_owner_edits(client):
+    import importlib.util
+    from pathlib import Path
+    from sqlalchemy import select
+    spec = importlib.util.spec_from_file_location("catalog_prices", Path(__file__).parents[1] / "scripts/import_catalog.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    _, factory = client
+    with factory() as db:
+        module.import_catalog(db)
+        potato = db.get(Product, "VEG-POTATO")
+        assert potato.price_bdt == Decimal("29")
+        assert potato.stock_qty == 0
+        assert potato.details["market_price"]["checked_on"] == "2026-11-21"
+        assert db.get(Product, "VEG-SPINACH").unit == "bundle"
+        potato.price_bdt = Decimal("33")
+        db.commit()
+        module.import_catalog(db)
+        assert db.get(Product, "VEG-POTATO").price_bdt == Decimal("33")
+        assert all(p.stock_qty == 0 for p in db.scalars(select(Product)).all() if p.sku not in ("ROHU", "RICE"))
+
+
+def test_market_price_reset_is_not_overwritten(client):
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location("catalog_reset", Path(__file__).parents[1] / "scripts/import_catalog.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    _, factory = client
+    with factory() as db:
+        module.import_catalog(db)
+        p = db.get(Product, "VEG-POTATO")
+        p.price_bdt = 0
+        p.price_approved = False
+        db.commit()
+        module.import_catalog(db)
+        assert db.get(Product, "VEG-POTATO").price_bdt == 0
+        assert db.get(Product, "VEG-POTATO").price_approved is False
+
+
+def test_public_checkout_explains_incomplete_setup(client):
+    browser, _ = client
+    data = browser.get("/api/v1/commerce/configuration").json()
+    assert data["ordering_open"] is False
+    assert any("delivery area" in x for x in data["setup_issues"])
+    assert any("payment method" in x for x in data["setup_issues"])

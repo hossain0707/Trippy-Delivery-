@@ -25,7 +25,7 @@ export function Market({
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("all");
-  const [sort, setSort] = useState("name");
+  const [sort, setSort] = useState("availability");
   const [selected, setSelected] = useState("");
   const [prep, setPrep] = useState<Record<string, string>>({});
   const [quantities, setQuantities] = useState<Record<string, string>>({});
@@ -76,8 +76,8 @@ export function Market({
       sort === "price"
         ? Number(a.price_bdt) - Number(b.price_bdt)
         : sort === "availability"
-          ? Number(b.price_approved && Number(b.stock_qty) > 0) -
-            Number(a.price_approved && Number(a.stock_qty) > 0)
+          ? Number(b.price_approved) - Number(a.price_approved) ||
+            Number(b.stock_qty) - Number(a.stock_qty)
           : (bn ? a.name_bn : a.name_en).localeCompare(
               bn ? b.name_bn : b.name_en,
             ),
@@ -163,7 +163,7 @@ export function Market({
                   {t("Price: low to high", "কম দাম আগে")}
                 </option>
                 <option value="availability">
-                  {t("Available first", "প্রাপ্য পণ্য আগে")}
+                  {t("Priced products first", "প্রাপ্য পণ্য আগে")}
                 </option>
               </select>
             </label>
@@ -195,13 +195,25 @@ export function Market({
           error ||
           (loading ? t("Opening the market…", "পণ্য আসছে…") : "")}
       </p>
+      <div className="shopping-note" role="note">
+        <strong>
+          {t("Plan your market basket", "আপনার বাজারের ঝুড়ি সাজান")}
+        </strong>
+        <p>
+          {t(
+            "Choose quantities and save your basket. Adding items does not reserve inventory. Confirmed stock, delivery and payment setup are required before placing a real order.",
+            "পরিমাণ বেছে ঝুড়ি সংরক্ষণ করুন। ঝুড়িতে রাখলে মজুত সংরক্ষিত হয় না। প্রকৃত অর্ডারের আগে মজুত, ডেলিভারি ও পেমেন্ট ব্যবস্থা নিশ্চিত করা প্রয়োজন।",
+          )}
+        </p>
+      </div>
       <div className={detail ? "product-detail-grid" : "market-grid"}>
         {shown.map((p) => {
           const options = p.details.preparation_options || [];
           const choice = options.find(
             (o) => o.id === (prep[p.sku] || options.find((o) => o.enabled)?.id),
           );
-          const available = p.price_approved && Number(p.stock_qty) > 0;
+          const priced = p.price_approved && Number(p.price_bdt) > 0;
+          const available = priced && Number(p.stock_qty) > 0;
           return (
             <article key={p.sku} className="market-product">
               <Link
@@ -218,7 +230,25 @@ export function Market({
                   />
                 ) : (
                   <div className="photo-pending">
-                    {t("Photo coming soon", "ছবি শীঘ্রই আসছে")}
+                    <span aria-hidden="true" className="category-art">
+                      {(
+                        {
+                          vegetables: "🥬",
+                          fish: "🐟",
+                          meat: "🥩",
+                          fruit: "🍎",
+                          pantry: "🌾",
+                          spices: "🌶️",
+                          dairy: "🥛",
+                          bakery: "🍞",
+                          packaged: "🛍️",
+                          essentials: "🧴",
+                        } as Record<string, string>
+                      )[p.details.department || "pantry"] || "🛍️"}
+                    </span>
+                    <small>
+                      {t("Illustration · photo pending", "প্রতীকী ছবি")}
+                    </small>
                   </div>
                 )}
                 {p.details.seasonal && (
@@ -243,17 +273,43 @@ export function Market({
                 <p className="price-line">
                   {p.price_approved
                     ? money(p.price_bdt, bn)
-                    : t("Price awaiting approval", "দাম অনুমোদনের অপেক্ষায়")}{" "}
+                    : t("Ask for today’s price", "আজকের দাম জানতে চান")}{" "}
                   <span>{p.price_approved ? "/ " + p.unit : ""}</span>
                 </p>
                 <p className={available ? "stock-ready" : "stock-pending"}>
                   {available
                     ? t("Available to reserve", "অর্ডারের জন্য উপলব্ধ")
                     : t(
-                        "Not available to order yet",
-                        "এখনো অর্ডার করা যাচ্ছে না",
+                        priced
+                          ? "Add to your basket; stock confirmation required"
+                          : "Price being checked",
+                        priced
+                          ? "ঝুড়িতে রাখুন; মজুত নিশ্চিত করা প্রয়োজন"
+                          : "দাম যাচাই করা হচ্ছে",
                       )}
                 </p>
+                {p.details.market_price && (
+                  <details className="market-price-source">
+                    <summary>
+                      {t("Market-based price", "বাজারভিত্তিক দাম")} ·{" "}
+                      {p.details.market_price.checked_on}
+                    </summary>
+                    <p>
+                      {t(
+                        "Retail comparison checked on this date; prices vary by pack and preparation. This is not a live price feed.",
+                        "এই তারিখে খুচরা দামের তুলনা করা হয়েছে; প্যাকেট ও প্রস্তুতি অনুযায়ী দাম ভিন্ন। এটি সরাসরি বাজারদরের ফিড নয়।",
+                      )}
+                    </p>
+                    <p>{p.details.market_price.basis}</p>
+                    <a
+                      href={p.details.market_price.source_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("View price source", "দামের উৎস দেখুন")}
+                    </a>
+                  </details>
+                )}
                 {options.length > 0 && (
                   <label>
                     {t("How would you like it?", "কীভাবে নিতে চান?")}
@@ -311,7 +367,7 @@ export function Market({
                       type="number"
                       min={p.details.minimum_quantity || 1}
                       step={p.details.quantity_step || 1}
-                      max={Math.min(50, Number(p.stock_qty) || 50)}
+                      max="50"
                       value={
                         quantities[p.sku] || p.details.minimum_quantity || "1"
                       }
@@ -326,17 +382,18 @@ export function Market({
                   <button
                     className="primary"
                     disabled={
-                      !available ||
                       Number(
                         quantities[p.sku] || p.details.minimum_quantity || 1,
                       ) <= 0 ||
                       Number(
                         quantities[p.sku] || p.details.minimum_quantity || 1,
-                      ) > Number(p.stock_qty)
+                      ) > 50
                     }
                     onClick={() => add(p)}
                   >
-                    {t("Add to basket", "ঝুড়িতে রাখুন")}
+                    {priced
+                      ? t("Add to basket", "ঝুড়িতে রাখুন")
+                      : t("Save to shopping list", "বাজারের তালিকায় রাখুন")}
                   </button>
                 </div>
                 {detail && (
