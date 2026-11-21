@@ -1,6 +1,6 @@
 # Dhaka pilot GO / NO-GO
 
-**Recommendation: NO-GO for real customer ordering until the owner completes and approves the following gates.** The preview and catalog may be published while these gates remain open.
+**No-payment requests are open. Automated paid ordering remains NO-GO until the operating gates below are complete.** Customers can submit requests, receive an owner-reviewed quote, accept it and track actual manual fulfillment. No inventory, availability or courier capacity is invented; the owner must verify these before committing a final quote and assigning a verified courier.
 
 | Gate | Required evidence |
 | --- | --- |

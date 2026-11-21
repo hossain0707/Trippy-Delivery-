@@ -1,5 +1,13 @@
 # TRIPPY Delivery commerce operations
 
+## No-payment request workflow
+
+Customers can submit grocery requests and parcel pickup requests while online payment processing stays disabled. Grocery requests preserve the requested whole, cleaned, cut or custom preparation and contact/delivery instructions. Zero stock is not invented or reserved: the request is pending availability, procurement and a final quote. Unknown product prices, preparation charges and delivery fees remain pending, never zero-cost promises.
+
+The owner reviews a request, sends a final inclusive quote with a note, and the customer must explicitly accept it. The owner cannot accept on the customer's behalf. Accepted requests can progress through preparation, packing, verified courier assignment and delivery. Eligible assigned couriers can record their actual progress. Request cancellation does not add fictitious stock. The original paid checkout and receipt-confirmation routes remain blocked in preview.
+
+This is a functioning request-and-confirm operation, not automatic procurement, a payment gateway, GPS tracking or proof that an operating courier exists. The owner supplies real availability and delivery commitments when issuing a quote. Request records and history persist in the existing PostgreSQL order/parcel tables.
+
 ## Release posture
 
 This is a preview release, not an approved commercial launch. `APP_ENV=preview`, `LIVE_ORDERS_ENABLED=false` and `PILOT_APPROVED=false` keep customer order writes and fulfillment closed. Automated payment gateways are not implemented or enabled. Changing database settings alone cannot open ordering, and `preview` stays closed even if both environment flags are accidentally set.
