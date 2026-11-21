@@ -90,7 +90,7 @@ function Record({ bn }: { bn: boolean }) {
               </strong>
             </p>
             <p>
-              {requestOnly ? "Priced items estimate: " : "Total: "}
+              {requestOnly && !order.checkout_data?.quoted_total_bdt ? "Priced items estimate: " : "Total: "}
               <strong>{money(order.amount_bdt)}</strong>
             </p>
             {!requestOnly && (
@@ -102,45 +102,7 @@ function Record({ bn }: { bn: boolean }) {
                 (Bangladesh time)
               </p>
             )}
-            {requestOnly && order.status === "quoted" && (
-              <div className="order-review">
-                <h3>Your final quote</h3>
-                <p>
-                  {money(
-                    order.checkout_data?.quoted_total_bdt || order.amount_bdt,
-                  )}
-                </p>
-                <p>{order.checkout_data?.quote_note}</p>
-                <p>
-                  No payment is collected here. Accept only if you agree to the
-                  stated quote and arrangements.
-                </p>
-                <button
-                  className="primary"
-                  onClick={async () => {
-                    try {
-                      await commerceApi(
-                        "/commerce/order-requests/" + order.id + "/update",
-                        token,
-                        "POST",
-                        {
-                          status: "confirmed",
-                          note: "Customer accepted the final quote",
-                          accepted_total_bdt:
-                            order.checkout_data?.quoted_total_bdt,
-                        },
-                      );
-                      setOrder({ ...order, status: "confirmed" });
-                    } catch (e) {
-                      setError((e as Error).message);
-                    }
-                  }}
-                >
-                  Accept quote & confirm order
-                </button>
-              </div>
-            )}
-            {requestOnly && (
+            {requestOnly && !order.checkout_data?.quoted_total_bdt && (
               <p>
                 Request received. Stock, preparation charges and delivery are
                 awaiting confirmation. No payment is collected and no delivery
