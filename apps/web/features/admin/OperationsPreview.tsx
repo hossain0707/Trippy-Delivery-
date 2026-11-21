@@ -58,8 +58,8 @@ export function OperationsPreview() {
   return (
     <section className="panel operations">
       <p>
-        Payments are disabled. Review no-payment requests and quotes above.
-        Catalog changes are saved.
+        Preview: payments, order placement and fulfillment are disabled. Catalog
+        changes are saved.
       </p>
       <nav className="tabs" aria-label="Operations sections">
         {[

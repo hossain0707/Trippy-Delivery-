@@ -1,6 +1,6 @@
 # Dhaka pilot GO / NO-GO
 
-**No-payment requests are open. Automated paid ordering remains NO-GO until the operating gates below are complete.** Customers can submit requests, receive an owner-reviewed quote, accept it and track actual manual fulfillment. No inventory, availability or courier capacity is invented; the owner must verify these before committing a final quote and assigning a verified courier.
+**Preview calculation and saved preview orders are available; live payments and fulfillment remain NO-GO.** The original shopping interface is restored. A complete preview total requires approved product prices and configured service fees. No stock, courier capacity or payment receipt is invented. Saving a preview order does not initiate fulfillment.
 
 | Gate | Required evidence |
 | --- | --- |

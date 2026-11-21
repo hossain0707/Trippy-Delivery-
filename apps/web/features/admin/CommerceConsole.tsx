@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useCredential } from "@/features/account/GoogleAccess";
 import {
@@ -36,6 +35,13 @@ type Zone = {
   courier_ready: boolean;
 };
 type Pilot = {
+  delivery_base_area?: string;
+  delivery_base_fee_bdt?: string | null;
+  delivery_per_km_bdt?: string | null;
+  preparation_cleaned_fee_bdt?: string | null;
+  preparation_cut_only_fee_bdt?: string | null;
+  preparation_cut_fee_bdt?: string | null;
+  dhaka_delivery_fee_bdt?: string | null;
   zones: Zone[];
   promotions: {
     code: string;
@@ -49,12 +55,7 @@ type Pilot = {
   banner_en: string;
   banner_bn: string;
 };
-type Parcel = {
-  package?: { request_only?: boolean };
-  id: string;
-  tracking_code: string;
-  status: string;
-};
+type Parcel = { id: string; tracking_code: string; status: string };
 type Order = {
   id: string;
   order_number: string;
@@ -112,7 +113,6 @@ export function CommerceConsole() {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [couriers, setCouriers] = useState<Courier[]>([]);
   const [records, setRecords] = useState<Record<string, unknown>[]>([]);
-  const [quoteTotals, setQuoteTotals] = useState<Record<string, string>>({});
   const [receipt, setReceipt] = useState<Record<string, string>>({});
   const [assigned, setAssigned] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -166,8 +166,9 @@ export function CommerceConsole() {
       <p className="kicker">OWNER WORKSPACE</p>
       <h2>Catalog, payments & delivery controls</h2>
       <p>
-        No-payment requests are open for review. Confirm actual availability,
-        preparation charges and delivery before quoting. Payments remain disabled.
+        Live customer ordering stays closed until inventory, payment receiving
+        details, coverage and pilot approval are complete. Saving these settings
+        does not activate the pilot.
       </p>
       <nav className="department-pills" aria-label="Commerce administration">
         {[
@@ -578,6 +579,59 @@ export function CommerceConsole() {
             void save("/admin/commerce/settings/pilot", pilot);
           }}
         >
+          <fieldset>
+            <legend>Order calculator charges</legend>
+            <p>
+              Preparation fees are per ordered kg. Delivery is the base fee
+              within the base area; outside it, add the per-kilometre fee.
+              Area-specific tariffs take precedence. Blank means unset; enter 0
+              only when the service is intentionally free. These settings do not
+              enable payments or fulfillment.
+            </p>
+            <label>
+              Delivery base area
+              <input
+                required
+                maxLength={80}
+                value={pilot.delivery_base_area || "Uttara"}
+                onChange={(e) =>
+                  setPilot({ ...pilot, delivery_base_area: e.target.value })
+                }
+              />
+            </label>
+            {(
+              [
+                ["preparation_cleaned_fee_bdt", "Cleaning per kg (BDT)"],
+                ["preparation_cut_only_fee_bdt", "Cut only per kg (BDT)"],
+                ["preparation_cut_fee_bdt", "Cut and clean per kg (BDT)"],
+                [
+                  "delivery_base_fee_bdt",
+                  "Delivery within base area (BDT/order)",
+                ],
+                [
+                  "delivery_per_km_bdt",
+                  "Additional delivery per km outside base area (BDT)",
+                ],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key}>
+                {label}
+                <input
+                  type="number"
+                  min="0"
+                  max="5000"
+                  step="0.01"
+                  value={pilot[key] ?? ""}
+                  onChange={(e) =>
+                    setPilot({
+                      ...pilot,
+                      [key]: e.target.value === "" ? null : e.target.value,
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </fieldset>
           <div className="fields">
             <label>
               Support phone
@@ -841,194 +895,94 @@ export function CommerceConsole() {
                 Fulfillment: <strong>{o.status}</strong> · Payment:{" "}
                 <strong>{o.payment_status}</strong> ({o.payment_method})
               </p>
-              <p>
-                {o.payment_method === "disabled"
-                  ? "Priced items estimate"
-                  : "Total"}{" "}
-                {money(o.amount_bdt)}
-              </p>
-              {o.payment_method === "disabled" ? (
-                <>
-                  <p>
-                    No payment collected. Availability, preparation and delivery
-                    quote need review.
-                  </p>
-                  <Link href={"/orders?id=" + o.id}>
-                    View request details and instructions
-                  </Link>
-                  <label>
-                    Customer update
-                    <input
-                      value={notes[o.id] || ""}
-                      onChange={(e) =>
-                        setNotes({ ...notes, [o.id]: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Final quote total including preparation and delivery
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={quoteTotals[o.id] || ""}
-                      onChange={(e) =>
-                        setQuoteTotals({
-                          ...quoteTotals,
-                          [o.id]: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Verified courier
-                    <select
-                      value={assigned[o.id] || ""}
-                      onChange={(e) =>
-                        setAssigned({ ...assigned, [o.id]: e.target.value })
-                      }
-                    >
-                      <option value="">Select for assignment</option>
-                      {couriers
-                        .filter(
-                          (c) => c.status === "approved" && c.details.active,
-                        )
-                        .map((c) => (
-                          <option value={c.id} key={c.id}>
-                            {c.id}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <div className="department-pills">
-                    {[
-                      "reviewing",
-                      "contacted",
-                      "quoted",
-                      "preparing",
-                      "packed",
-                      "assigned",
-                      "out_for_delivery",
-                      "delivered",
-                      "rejected",
-                      "cancelled",
-                    ].map((status) => (
-                      <button
-                        key={status}
-                        disabled={busy || !notes[o.id]?.trim()}
-                        onClick={() =>
-                          void save(
-                            "/commerce/order-requests/" + o.id + "/update",
-                            {
-                              status,
-                              note: notes[o.id],
-                              ...(status === "quoted"
-                                ? { final_total_bdt: quoteTotals[o.id] }
-                                : {}),
-                              courier_id: assigned[o.id] || null,
-                            },
-                            "POST",
-                          )
-                        }
-                      >
-                        {status.replaceAll("_", " ")}
-                      </button>
+              <p>Total {money(o.amount_bdt)}</p>
+              <label>
+                Receipt reference
+                <input
+                  value={receipt[o.id] || ""}
+                  onChange={(e) =>
+                    setReceipt({ ...receipt, [o.id]: e.target.value })
+                  }
+                />
+              </label>
+              <button
+                className="secondary"
+                disabled={busy || o.payment_status === "paid"}
+                onClick={() =>
+                  void save(
+                    "/admin/commerce/orders/" + o.id + "/payment",
+                    {
+                      received_amount_bdt: o.amount_bdt,
+                      receipt_reference: receipt[o.id] || "",
+                    },
+                    "POST",
+                  )
+                }
+              >
+                Verify actual receipt
+              </button>
+              <label>
+                Approved courier
+                <select
+                  value={assigned[o.id] || ""}
+                  onChange={(e) =>
+                    setAssigned({ ...assigned, [o.id]: e.target.value })
+                  }
+                >
+                  <option value="">Choose a courier</option>
+                  {couriers
+                    .filter((c) => c.status === "approved" && c.details.active)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.id} · {c.transport_mode}
+                      </option>
                     ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <label>
-                    Receipt reference
-                    <input
-                      value={receipt[o.id] || ""}
-                      onChange={(e) =>
-                        setReceipt({ ...receipt, [o.id]: e.target.value })
-                      }
-                    />
-                  </label>
+                </select>
+              </label>
+              <label>
+                Review or exception note
+                <input
+                  maxLength={500}
+                  value={notes[o.id] || ""}
+                  onChange={(e) =>
+                    setNotes({ ...notes, [o.id]: e.target.value })
+                  }
+                />
+              </label>
+              <div className="department-pills">
+                {[
+                  "confirmed",
+                  "preparing",
+                  "packed",
+                  "assigned",
+                  "out_for_delivery",
+                  "delivered",
+                  "rejected",
+                  "failed",
+                ].map((s) => (
                   <button
-                    className="secondary"
-                    disabled={busy || o.payment_status === "paid"}
+                    key={s}
+                    disabled={busy}
                     onClick={() =>
                       void save(
-                        "/admin/commerce/orders/" + o.id + "/payment",
+                        "/admin/commerce/orders/" + o.id + "/transition",
                         {
-                          received_amount_bdt: o.amount_bdt,
-                          receipt_reference: receipt[o.id] || "",
+                          status: s,
+                          courier_id: assigned[o.id] || null,
+                          note: notes[o.id] || "",
                         },
                         "POST",
                       )
                     }
                   >
-                    Verify actual receipt
+                    {s.replaceAll("_", " ")}
                   </button>
-                  <label>
-                    Approved courier
-                    <select
-                      value={assigned[o.id] || ""}
-                      onChange={(e) =>
-                        setAssigned({ ...assigned, [o.id]: e.target.value })
-                      }
-                    >
-                      <option value="">Choose a courier</option>
-                      {couriers
-                        .filter(
-                          (c) => c.status === "approved" && c.details.active,
-                        )
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.id} · {c.transport_mode}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <label>
-                    Review or exception note
-                    <input
-                      maxLength={500}
-                      value={notes[o.id] || ""}
-                      onChange={(e) =>
-                        setNotes({ ...notes, [o.id]: e.target.value })
-                      }
-                    />
-                  </label>
-                  <div className="department-pills">
-                    {[
-                      "confirmed",
-                      "preparing",
-                      "packed",
-                      "assigned",
-                      "out_for_delivery",
-                      "delivered",
-                      "rejected",
-                      "failed",
-                    ].map((s) => (
-                      <button
-                        key={s}
-                        disabled={busy}
-                        onClick={() =>
-                          void save(
-                            "/admin/commerce/orders/" + o.id + "/transition",
-                            {
-                              status: s,
-                              courier_id: assigned[o.id] || null,
-                              note: notes[o.id] || "",
-                            },
-                            "POST",
-                          )
-                        }
-                      >
-                        {s.replaceAll("_", " ")}
-                      </button>
-                    ))}
-                  </div>
-                  <p>
-                    Preview blocks fulfillment and payment confirmation. Invalid
-                    transitions are rejected by the backend.
-                  </p>
-                </>
-              )}
+                ))}
+              </div>
+              <p>
+                Preview blocks fulfillment and payment confirmation. Invalid
+                transitions are rejected by the backend.
+              </p>
             </article>
           ))}
         </>
@@ -1039,12 +993,6 @@ export function CommerceConsole() {
           {parcels.map((p) => (
             <article className="panel" key={p.id}>
               <h3>{p.tracking_code}</h3>
-              {p.package?.request_only && (
-                <p>
-                  No-payment pickup request. Confirm coverage and pickup before
-                  assigning.
-                </p>
-              )}
               <p>{p.status}</p>
               <label>
                 Approved courier
@@ -1078,35 +1026,23 @@ export function CommerceConsole() {
                 Assign courier
               </button>
               <div className="department-pills">
-                {(p.package?.request_only
-                  ? [
-                      "reviewing",
-                      "confirmed",
-                      "picked_up",
-                      "in_transit",
-                      "delivered",
-                      "cancelled",
-                    ]
-                  : ["picked_up", "in_transit", "delivered", "cancelled"]
-                ).map((status) => (
-                  <button
-                    disabled={busy}
-                    key={status}
-                    onClick={() =>
-                      void save(
-                        p.package?.request_only
-                          ? "/parcels/requests/" + p.id + "/update"
-                          : "/admin/parcels/" + p.id + "/status",
-                        p.package?.request_only
-                          ? { status, note: "Pickup status reviewed by owner" }
-                          : { status },
-                        "POST",
-                      )
-                    }
-                  >
-                    {status.replaceAll("_", " ")}
-                  </button>
-                ))}
+                {["picked_up", "in_transit", "delivered", "cancelled"].map(
+                  (status) => (
+                    <button
+                      disabled={busy}
+                      key={status}
+                      onClick={() =>
+                        void save(
+                          "/admin/parcels/" + p.id + "/status",
+                          { status },
+                          "POST",
+                        )
+                      }
+                    >
+                      {status.replaceAll("_", " ")}
+                    </button>
+                  ),
+                )}
               </div>
             </article>
           ))}

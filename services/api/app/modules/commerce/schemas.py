@@ -119,6 +119,13 @@ class Promotion(BaseModel):
 
 
 class PilotSettings(BaseModel):
+    delivery_base_area: str = Field(default="Uttara", min_length=2, max_length=80)
+    delivery_base_fee_bdt: Decimal | None = Field(default=None, ge=0, le=5000, decimal_places=2)
+    delivery_per_km_bdt: Decimal | None = Field(default=None, ge=0, le=1000, decimal_places=2)
+    preparation_cleaned_fee_bdt: Decimal | None = Field(default=None, ge=0, le=10000, decimal_places=2)
+    preparation_cut_only_fee_bdt: Decimal | None = Field(default=None, ge=0, le=10000, decimal_places=2)
+    preparation_cut_fee_bdt: Decimal | None = Field(default=None, ge=0, le=10000, decimal_places=2)
+    dhaka_delivery_fee_bdt: Decimal | None = Field(default=None, ge=0, le=5000, decimal_places=2)
     model_config = ConfigDict(extra="forbid")
     promotions: list[Promotion] = Field(default_factory=list, max_length=30)
     zones: list[DeliveryZone] = Field(default_factory=list, max_length=100)

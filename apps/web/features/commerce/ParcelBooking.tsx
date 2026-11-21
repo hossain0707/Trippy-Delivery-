@@ -1,8 +1,8 @@
 "use client";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { GoogleAccess, useCredential } from "@/features/account/GoogleAccess";
-import { commerceApi } from "@/lib/commerce";
+import { commerceApi, type Configuration } from "@/lib/commerce";
 import { ParcelPreview } from "@/features/parcels/ParcelPreview";
 type Address = {
   name: string;
@@ -23,9 +23,14 @@ const empty: Address = {
 function BookingButton({ payload, bn }: { payload: unknown; bn: boolean }) {
   const token = useCredential();
   const key = useRef("");
-  const [received, setReceived] = useState(false);
+  const [config, setConfig] = useState<Configuration | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  useEffect(() => {
+    commerceApi<Configuration>("/commerce/configuration")
+      .then(setConfig)
+      .catch((e) => setStatus(e.message));
+  }, []);
   return (
     <>
       <p>
@@ -35,23 +40,19 @@ function BookingButton({ payload, bn }: { payload: unknown; bn: boolean }) {
       </p>
       <button
         className="primary"
-        disabled={received || busy}
+        disabled={!config?.ordering_open || busy}
         onClick={async () => {
           setBusy(true);
           if (!key.current) key.current = crypto.randomUUID();
           try {
             const p = await commerceApi<{ tracking_code: string }>(
-              "/parcels/requests",
+              "/parcels",
               token,
               "POST",
               payload,
               key.current,
             );
-            setStatus(
-              (bn ? "পিকআপের অনুরোধ গৃহীত: " : "Pickup request received: ") +
-                p.tracking_code,
-            );
-            setReceived(true);
+            setStatus("Booking received: " + p.tracking_code);
           } catch (e) {
             setStatus((e as Error).message);
           } finally {
@@ -61,16 +62,13 @@ function BookingButton({ payload, bn }: { payload: unknown; bn: boolean }) {
       >
         {bn ? "পিকআপের অনুরোধ করুন" : "Request pickup"}
       </button>
-      <p role="status">{status}</p>
-      {received && (
-        <Link href="/account">
-          {bn ? "আমার পার্সেল ও ট্র্যাকিং" : "My parcels & tracking"}
-        </Link>
-      )}
-      <p>
-        {bn
-          ? "কোনো পেমেন্ট নেওয়া হচ্ছে না। পিকআপ ও সেবার প্রাপ্যতা ট্রিপি নিশ্চিত করবে।"
-          : "No payment is collected. TRIPPY will confirm pickup and service availability."}
+      <p role="status">
+        {status ||
+          (!config?.ordering_open
+            ? bn
+              ? "মালিকের পাইলট অনুমোদনের অপেক্ষায় বুকিং বন্ধ।"
+              : "Booking is closed pending owner pilot approval."
+            : "")}
       </p>
     </>
   );

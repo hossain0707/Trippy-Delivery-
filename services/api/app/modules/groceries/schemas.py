@@ -21,6 +21,8 @@ class CartItem(BaseModel):
 
 
 class Checkout(BaseModel):
+    delivery_distance_km: Decimal | None = Field(default=None, ge=0, le=500, decimal_places=2)
+    expected_total_bdt: Decimal | None = Field(default=None, ge=0, decimal_places=2)
     promo_code: str = Field(default="",max_length=30,pattern=r"^[A-Z0-9-]*$")
     payment_method: Literal["cod", "bkash", "nagad", "rocket", "bank"] = "cod"
     payment_reference: str = Field(default="",max_length=120)
