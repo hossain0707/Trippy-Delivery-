@@ -12,6 +12,7 @@ from app.modules.groceries.router import router as groceries
 from app.modules.parcels.router import router as parcels
 from app.modules.operations.router import router as operations
 from app.modules.commerce.router import router as commerce, admin as commerce_admin
+from app.modules.commerce.requests import router as order_requests
 
 configure_logs()
 config = settings()
@@ -32,8 +33,12 @@ async def preview_write_guard(request: Request, call_next):
             and path
             in (
                 "/api/v1/parcels/quote",
+                "/api/v1/parcels/requests",
                 "/api/v1/commerce/review",
+                "/api/v1/commerce/order-requests",
+                "/api/v1/commerce/order-requests/review",
                 "/api/v1/commerce/courier/application",
+                "/api/v1/commerce/courier/update",
             )
         ) or (
             request.method == "PUT"
@@ -50,13 +55,20 @@ async def preview_write_guard(request: Request, call_next):
                 )
             )
         )
+        allowed = allowed or (
+            request.method == "POST"
+            and path.startswith(("/api/v1/commerce/order-requests/", "/api/v1/parcels/requests/"))
+            and path.endswith("/update")
+        )
         if not allowed:
             return JSONResponse(
                 status_code=503,
                 content={"detail": "TRIPPY Delivery read-only preview: orders are disabled."},
             )
     response = await call_next(request)
-    if request.url.path.startswith(("/api/v1/account", "/api/v1/admin", "/api/v1/parcels/", "/api/v1/commerce")):
+    if request.url.path.startswith(
+        ("/api/v1/account", "/api/v1/admin", "/api/v1/parcels/", "/api/v1/commerce")
+    ):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -72,6 +84,7 @@ app.add_middleware(
 )
 
 
+app.include_router(order_requests, prefix="/api/v1")
 app.include_router(commerce, prefix="/api/v1")
 app.include_router(commerce_admin, prefix="/api/v1")
 app.include_router(parcels, prefix="/api/v1")

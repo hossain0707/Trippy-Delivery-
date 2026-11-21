@@ -33,6 +33,14 @@ export type Product = {
     quantity_step?: string;
     variants?: string[];
     images_approved?: boolean;
+    photo_credit?: {
+      source_url: string;
+      creator: string;
+      license: string;
+      license_url: string;
+      title: string;
+      representative: boolean;
+    } | null;
     catalog_version?: string;
     market_price?: {
       amount_bdt: string;

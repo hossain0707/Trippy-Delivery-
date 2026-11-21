@@ -7,18 +7,42 @@ import {
   money,
   type Product,
   type BasketLine,
-  type Configuration,
 } from "@/lib/commerce";
 import { readBasket, writeBasket, lineTotal } from "@/lib/basket.mjs";
 type Review = {
   subtotal_bdt: string;
-  discount_bdt: string;
-  delivery_fee_bdt: string;
-  total_bdt: string;
-  delivery_deadline: string;
-  slot_confirmed: boolean;
-  ordering_open: boolean;
+  lines: {
+    sku: string;
+    price_pending: boolean;
+    preparation_fee_pending: boolean;
+  }[];
+  message: string;
 };
+const dhakaAreas = [
+  "Dhanmondi",
+  "Uttara",
+  "Banani",
+  "Gulshan",
+  "Mirpur",
+  "Mohammadpur",
+  "Bashundhara",
+  "Badda",
+  "Motijheel",
+  "Ramna",
+  "Tejgaon",
+  "Khilgaon",
+  "Jatrabari",
+  "Lalbagh",
+  "Wari",
+  "Demra",
+  "Kafrul",
+  "Cantonment",
+  "Airport",
+  "Pallabi",
+  "Shahbag",
+  "Malibagh",
+  "Rampura",
+];
 function CheckoutForm({
   lines,
   bn,
@@ -29,18 +53,14 @@ function CheckoutForm({
   clear: () => void;
 }) {
   const token = useCredential();
-  const key = useRef("");
-  const [configuration, setConfiguration] = useState<Configuration | null>(
-    null,
-  );
-  const [savedCart, setSavedCart] = useState<BasketLine[]>([]);
+  const key = useRef(crypto.randomUUID());
   const [review, setReview] = useState<Review | null>(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [savedCart, setSavedCart] = useState<BasketLine[]>([]);
   const [order, setOrder] = useState<{
     id: string;
     order_number: string;
-    payment_status: string;
   } | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -51,79 +71,102 @@ function CheckoutForm({
     postal_code: "",
     instructions: "",
     preparation_notes: "",
-    promo_code: "",
-    payment_method: "cod",
-    payment_reference: "",
   });
   const t = (en: string, b: string) => (bn ? b : en);
   useEffect(() => {
     let active = true;
-    Promise.all([
-      commerceApi<Configuration>("/commerce/configuration"),
-      commerceApi<{ items: BasketLine[] }>("/commerce/cart", token),
-    ])
-      .then(([c, b]) => {
-        if (active) {
-          setConfiguration(c);
-          setSavedCart(b.items);
-        }
+    commerceApi<{ items: BasketLine[] }>("/commerce/cart", token)
+      .then((b) => {
+        if (active) setSavedCart(b.items);
       })
-      .catch((e) => {
-        if (active) setStatus(e.message);
-      });
+      .catch((e) => setStatus(e.message));
+    commerceApi<{ name: string; phone: string }>("/account/profile", token)
+      .then((p) => {
+        if (active)
+          setForm((v) => ({
+            ...v,
+            name: v.name || p.name || "",
+            phone: v.phone || p.phone || "",
+          }));
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
   }, [token]);
+  useEffect(() => {
+    setReview(null);
+    key.current = crypto.randomUUID();
+  }, [lines]);
   const payload = {
     destination: {
       name: form.name,
       phone: form.phone,
       address_line: form.address_line,
-      city: form.city,
       area: form.area,
+      city: form.city,
       postal_code: form.postal_code,
     },
     items: lines,
-    payment_method: form.payment_method,
-    payment_reference: form.payment_reference,
     instructions: form.instructions,
     preparation_notes: form.preparation_notes,
-    promo_code: form.promo_code,
   };
-  const destination = configuration?.payments[form.payment_method];
+  const fields = [
+    ["name", "Recipient name", "প্রাপকের নাম", "name"],
+    ["phone", "Bangladesh mobile number", "বাংলাদেশি মোবাইল নম্বর", "tel"],
+    [
+      "address_line",
+      "House, road & delivery address",
+      "বাড়ি, রাস্তা ও ডেলিভারির ঠিকানা",
+      "street-address",
+    ],
+    ["area", "Area / neighbourhood", "এলাকা", "address-level3"],
+    ["city", "City", "শহর", "address-level2"],
+    [
+      "postal_code",
+      "Postal code (optional)",
+      "পোস্ট কোড (ঐচ্ছিক)",
+      "postal-code",
+    ],
+  ];
   if (order)
     return (
-      <section className="panel">
-        <p className="kicker">{t("ORDER RECEIVED", "অর্ডার গৃহীত")}</p>
+      <section className="panel order-received">
+        <p className="kicker">{t("REQUEST RECEIVED", "অনুরোধ গৃহীত")}</p>
         <h2>{order.order_number}</h2>
         <p>
-          {t("Payment status", "পেমেন্টের অবস্থা")}: {order.payment_status}
-        </p>
-        <p>
           {t(
-            "Your order is awaiting review. A submitted transfer reference is not a confirmed payment.",
-            "আপনার অর্ডার পর্যালোচনার অপেক্ষায়। লেনদেন নম্বর জমা দেওয়া মানে পেমেন্ট নিশ্চিত হওয়া নয়।",
+            "Your order request is saved. TRIPPY will review availability, preparation and delivery, then confirm the final quote with you. No payment has been collected.",
+            "আপনার অর্ডারের অনুরোধ সংরক্ষিত হয়েছে। ট্রিপি পণ্যের প্রাপ্যতা, প্রস্তুতি ও ডেলিভারি যাচাই করে চূড়ান্ত দাম জানাবে। কোনো টাকা নেওয়া হয়নি।",
           )}
         </p>
-        <Link href={"/orders?id=" + order.id}>
-          {t("View order", "অর্ডার দেখুন")}
+        <Link className="primary" href={"/orders?id=" + order.id}>
+          {t("Track my request", "অনুরোধের অবস্থা দেখুন")}
         </Link>
+        <Link href="/groceries">{t("Continue shopping", "বাজার করুন")}</Link>
+        <Link href="/photo-credits">{t("Photo credits", "ছবির কৃতিত্ব")}</Link>
       </section>
     );
   return (
-    <section className="panel checkout-panel">
-      <h2>{t("Delivery & payment", "ডেলিভারি ও পেমেন্ট")}</h2>
-      {configuration && !configuration.ordering_open && (
-        <p className="launch-notice">
-          {t(configuration.pilot.banner_en, configuration.pilot.banner_bn)}
-        </p>
-      )}
-      <div className="cart-account-actions">
+    <section className="panel checkout-form">
+      <p className="kicker">{t("DELIVERY DETAILS", "ডেলিভারির তথ্য")}</p>
+      <h2>
+        {t(
+          review ? "Review your request" : "Where should we deliver?",
+          review ? "আপনার অনুরোধ দেখুন" : "কোথায় পৌঁছে দেব?",
+        )}
+      </h2>
+      <p>
+        {t(
+          "Submit without payment. Availability, preparation charges and delivery cost will be confirmed before you accept a final quote.",
+          "পেমেন্ট ছাড়াই অনুরোধ পাঠান। চূড়ান্ত দাম গ্রহণের আগে প্রাপ্যতা, প্রস্তুতির খরচ ও ডেলিভারি চার্জ নিশ্চিত করা হবে।",
+        )}
+      </p>
+      <div className="basket-actions">
         <button
-          className="secondary"
-          disabled={!lines.length || busy}
+          type="button"
           onClick={async () => {
+            setBusy(true);
             try {
               await commerceApi("/commerce/cart", token, "PUT", {
                 items: lines,
@@ -131,52 +174,25 @@ function CheckoutForm({
               setStatus(
                 t(
                   "Basket saved to your account.",
-                  "আপনার অ্যাকাউন্টে ঝুড়ি সংরক্ষিত হয়েছে।",
+                  "ঝুড়ি আপনার অ্যাকাউন্টে সংরক্ষিত হয়েছে।",
                 ),
               );
             } catch (e) {
               setStatus((e as Error).message);
+            } finally {
+              setBusy(false);
             }
           }}
+          disabled={busy || !lines.length}
         >
-          {t("Save basket to my account", "অ্যাকাউন্টে ঝুড়ি সংরক্ষণ")}
+          {t("Save basket", "ঝুড়ি সংরক্ষণ করুন")}
         </button>
         {savedCart.length > 0 && (
-          <button
-            className="secondary"
-            onClick={() => {
-              writeBasket(savedCart);
-              window.location.reload();
-            }}
-          >
-            {t("Restore my saved basket", "সংরক্ষিত ঝুড়ি ফিরিয়ে আনুন")}
+          <button type="button" onClick={() => writeBasket(savedCart)}>
+            {t("Restore saved basket", "সংরক্ষিত ঝুড়ি ফিরিয়ে আনুন")}
           </button>
         )}
       </div>
-      {configuration && !configuration.ordering_open && (
-        <aside className="shopping-note" role="note">
-          <h3>
-            {t(
-              "Checkout is being prepared. Your basket is saved.",
-              "অর্ডার সেবা প্রস্তুত হচ্ছে। আপনার ঝুড়ি সংরক্ষিত আছে।",
-            )}
-          </h3>
-          <p>
-            {t(
-              "Your items can be saved. Orders and money transfers are not being accepted yet.",
-              "আপনার পণ্য সংরক্ষণ করা যাবে। এখনো অর্ডার বা টাকা গ্রহণ করা হচ্ছে না।",
-            )}
-          </p>
-          <ul>
-            {configuration.setup_issues?.map((issue) => (
-              <li key={issue}>{issue}</li>
-            ))}
-          </ul>
-          <Link href="/support">
-            {t("Contact TRIPPY", "ট্রিপির সাথে যোগাযোগ করুন")}
-          </Link>
-        </aside>
-      )}
       <form
         onChange={() => setReview(null)}
         onSubmit={async (e) => {
@@ -184,13 +200,14 @@ function CheckoutForm({
           setBusy(true);
           setStatus("");
           try {
-            const value = await commerceApi<Review>(
-              "/commerce/review",
-              token,
-              "POST",
-              payload,
+            setReview(
+              await commerceApi<Review>(
+                "/commerce/order-requests/review",
+                token,
+                "POST",
+                payload,
+              ),
             );
-            setReview(value);
             key.current = crypto.randomUUID();
           } catch (e) {
             setStatus((e as Error).message);
@@ -200,45 +217,51 @@ function CheckoutForm({
         }}
       >
         <div className="fields">
-          {(
-            [
-              "name",
-              "phone",
-              "address_line",
-              "area",
-              "city",
-              "postal_code",
-            ] as const
-          ).map((k) => (
-            <label key={k}>
-              {
-                {
-                  name: t("Recipient name", "প্রাপকের নাম"),
-                  phone: t("Bangladesh contact number", "বাংলাদেশের ফোন নম্বর"),
-                  address_line: t(
-                    "House, road & delivery address",
-                    "বাড়ি, সড়ক ও ঠিকানা",
-                  ),
-                  area: t("Area", "এলাকা"),
-                  city: t("City", "শহর"),
-                  postal_code: t("Postal code (optional)", "পোস্ট কোড (ঐচ্ছিক)"),
-                }[k]
-              }
+          {fields.map(([key, en, b, autocomplete]) => (
+            <label key={key}>
+              {t(en, b)}
               <input
-                required={k !== "postal_code"}
-                type={k === "phone" ? "tel" : "text"}
-                minLength={k === "address_line" ? 5 : k === "phone" ? 8 : 1}
-                maxLength={
-                  k === "address_line" ? 300 : k === "phone" ? 20 : 120
+                name={key}
+                autoComplete={autocomplete}
+                type={key === "phone" ? "tel" : "text"}
+                required={key !== "postal_code"}
+                maxLength={key === "address_line" ? 300 : 120}
+                list={
+                  key === "area"
+                    ? "dhaka-areas"
+                    : key === "city"
+                      ? "delivery-cities"
+                      : undefined
                 }
-                value={form[k]}
-                onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+                value={form[key as keyof typeof form]}
+                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
               />
             </label>
           ))}
         </div>
+        <datalist id="dhaka-areas">
+          {dhakaAreas.map((a) => (
+            <option value={a} key={a} />
+          ))}
+        </datalist>
+        <datalist id="delivery-cities">
+          {[
+            "Dhaka",
+            "Chattogram",
+            "Sylhet",
+            "Khulna",
+            "Rajshahi",
+            "Barishal",
+            "Rangpur",
+            "Mymensingh",
+            "Gazipur",
+            "Narayanganj",
+          ].map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
         <label>
-          {t("Delivery instructions", "ডেলিভারির নির্দেশনা")}
+          {t("Delivery instructions (optional)", "ডেলিভারির নির্দেশনা (ঐচ্ছিক)")}
           <textarea
             maxLength={1000}
             value={form.instructions}
@@ -246,183 +269,74 @@ function CheckoutForm({
           />
         </label>
         <label>
-          {t("Preparation instructions", "প্রস্তুতের নির্দেশনা")}
+          {t(
+            "Cleaning / cutting instructions (optional)",
+            "পরিষ্কার / কাটার নির্দেশনা (ঐচ্ছিক)",
+          )}
           <textarea
             maxLength={500}
+            placeholder={t(
+              "For example: medium curry pieces; keep the fish head separate",
+              "যেমন: মাঝারি কারি কাট; মাছের মাথা আলাদা রাখুন",
+            )}
             value={form.preparation_notes}
             onChange={(e) =>
               setForm({ ...form, preparation_notes: e.target.value })
             }
           />
         </label>
-        <label>
-          {t("Offer code (optional)", "অফার কোড (ঐচ্ছিক)")}
-          <input
-            maxLength={30}
-            pattern="[A-Z0-9-]*"
-            value={form.promo_code}
-            onChange={(e) =>
-              setForm({ ...form, promo_code: e.target.value.toUpperCase() })
-            }
-          />
-        </label>
-        <fieldset className="payment-methods">
-          <legend>
-            {t("Choose a payment method", "পেমেন্ট পদ্ধতি বেছে নিন")}
-          </legend>
-          {[
-            ["bkash", "bKash"],
-            ["nagad", "Nagad"],
-            ["rocket", "Rocket"],
-            ["bank", "Bank Transfer"],
-            ["cod", t("Cash on Delivery", "ক্যাশ অন ডেলিভারি")],
-          ].map(([id, name]) => (
-            <label
-              key={id}
-              className={
-                form.payment_method === id
-                  ? "payment-card selected"
-                  : "payment-card"
-              }
-            >
-              <input
-                type="radio"
-                name="payment"
-                value={id}
-                checked={form.payment_method === id}
-                disabled={!configuration?.payments[id]?.enabled}
-                onChange={() =>
-                  setForm({
-                    ...form,
-                    payment_method: id,
-                    payment_reference: "",
-                  })
-                }
-              />
-              <strong>{name}</strong>
-              <span>
-                {configuration?.payments[id]?.enabled
-                  ? id === "cod"
-                    ? t("Pay on receipt", "পণ্য পেয়ে মূল্য পরিশোধ")
-                    : t("Manual verification", "ম্যানুয়াল যাচাই")
-                  : t("Not enabled yet", "এখনো চালু নয়")}
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        {form.payment_method !== "cod" && destination?.enabled && (
-          <div className="payment-instructions">
-            <h3>{t("Payment instructions", "পেমেন্ট নির্দেশনা")}</h3>
-            <p>{destination.instructions}</p>
-            {destination.bank_name && (
-              <p>
-                {destination.bank_name} · {destination.account_name} ·{" "}
-                {destination.branch} · {destination.routing}
-              </p>
-            )}
-            <p>
-              <strong>
-                {destination.receiving_number || destination.account_number}
-              </strong>{" "}
-              <button
-                type="button"
-                className="secondary"
-                onClick={async () => {
-                  await navigator.clipboard.writeText(
-                    destination.receiving_number ||
-                      destination.account_number ||
-                      "",
-                  );
-                  setStatus(t("Number copied.", "নম্বর কপি হয়েছে।"));
-                }}
-              >
-                {t("Copy", "কপি")}
-              </button>
-            </p>
-            <p>
-              {t("Amount due", "প্রদেয়")}:{" "}
-              {review
-                ? money(review.total_bdt, bn)
-                : t(
-                    "Review your order to calculate the final amount.",
-                    "চূড়ান্ত মূল্য জানতে অর্ডার পর্যালোচনা করুন।",
-                  )}
-            </p>
-            <label>
-              {t("Transaction reference", "লেনদেন নম্বর")}
-              <input
-                maxLength={120}
-                value={form.payment_reference}
-                onChange={(e) =>
-                  setForm({ ...form, payment_reference: e.target.value })
-                }
-              />
-            </label>
-            <p>
-              {t(
-                "Your payment stays pending until the owner verifies receipt.",
-                "মালিক প্রাপ্তি যাচাই না করা পর্যন্ত পেমেন্ট অপেক্ষমাণ থাকবে।",
-              )}
-            </p>
-          </div>
-        )}
-        <p>
+        <p className="payment-off">
           {t(
-            "Delivery windows use Bangladesh time and depend on confirmed area coverage, preparation and courier capacity.",
-            "ডেলিভারির সময় বাংলাদেশ সময় অনুযায়ী এবং এলাকার সেবা, প্রস্তুত ও কুরিয়ারের সক্ষমতার ওপর নির্ভরশীল।",
+            "Payments are disabled. Do not send money or enter transaction details.",
+            "পেমেন্ট বন্ধ আছে। টাকা পাঠাবেন না বা লেনদেনের তথ্য দেবেন না।",
           )}
         </p>
-        <button
-          className="secondary"
-          disabled={busy || !lines.length || !destination?.enabled}
-        >
-          {busy
-            ? t("Checking…", "যাচাই হচ্ছে…")
-            : t("Review order & delivery fee", "অর্ডার ও ডেলিভারি ফি দেখুন")}
-        </button>
+        {!review && (
+          <button className="primary" disabled={busy || !lines.length}>
+            {busy
+              ? t("Checking…", "যাচাই হচ্ছে…")
+              : t("Review my request", "অনুরোধ পর্যালোচনা করুন")}
+          </button>
+        )}
         {review && (
           <div className="order-review">
-            <h3>{t("Final order review", "চূড়ান্ত পর্যালোচনা")}</h3>
+            <h3>{t("Before you submit", "পাঠানোর আগে")}</h3>
             <p>
-              {t("Items", "পণ্য")}: {money(review.subtotal_bdt, bn)}
+              {t("Priced items estimate", "দাম জানা পণ্যের আনুমানিক মোট")}:{" "}
+              <strong>{money(review.subtotal_bdt, bn)}</strong>
             </p>
-            <p>
-              {t("Delivery", "ডেলিভারি")}: {money(review.delivery_fee_bdt, bn)}
-            </p>
-            {Number(review.discount_bdt) > 0 && (
+            {review.lines.some((l) => l.price_pending) && (
               <p>
-                {t("Offer savings", "অফারের সাশ্রয়")}:{" "}
-                {money(review.discount_bdt, bn)}
+                {t(
+                  "Some items need a price quote; they are not included in this estimate.",
+                  "কিছু পণ্যের দাম নিশ্চিত করা বাকি; সেগুলো এই হিসাবে নেই।",
+                )}
               </p>
             )}
-            <strong>
-              {t("Total", "মোট")}: {money(review.total_bdt, bn)}
-            </strong>
             <p>
-              {t("Proposed delivery deadline", "প্রস্তাবিত ডেলিভারি সময়")}:{" "}
-              {new Date(review.delivery_deadline).toLocaleString(
-                bn ? "bn-BD" : "en-BD",
-                { timeZone: "Asia/Dhaka" },
+              {t(
+                "Preparation and delivery: quote pending. This is not a final total or a confirmed delivery slot.",
+                "প্রস্তুতি ও ডেলিভারি: দাম নিশ্চিত করা বাকি। এটি চূড়ান্ত মোট বা নিশ্চিত ডেলিভারির সময় নয়।",
               )}
             </p>
             <button
-              className="primary"
               type="button"
-              disabled={
-                busy || !configuration?.ordering_open || !review.ordering_open
-              }
+              className="primary"
+              disabled={busy}
               onClick={async () => {
                 setBusy(true);
                 try {
                   const o = await commerceApi<{
                     id: string;
                     order_number: string;
-                    payment_status: string;
-                  }>("/groceries/orders", token, "POST", payload, key.current);
+                  }>(
+                    "/commerce/order-requests",
+                    token,
+                    "POST",
+                    payload,
+                    key.current,
+                  );
                   setOrder(o);
-                  await commerceApi("/commerce/cart", token, "PUT", {
-                    items: [],
-                  });
                   clear();
                 } catch (e) {
                   setStatus((e as Error).message);
@@ -431,7 +345,19 @@ function CheckoutForm({
                 }
               }}
             >
-              {t("Place order", "অর্ডার করুন")}
+              {busy
+                ? t("Submitting…", "পাঠানো হচ্ছে…")
+                : t(
+                    "Submit order request — no payment",
+                    "অর্ডারের অনুরোধ পাঠান — পেমেন্ট ছাড়া",
+                  )}
+            </button>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => setReview(null)}
+            >
+              {t("Edit delivery details", "ডেলিভারির তথ্য বদলান")}
             </button>
           </div>
         )}
@@ -466,13 +392,14 @@ export function BasketCheckout() {
           TRIPPY Delivery
         </Link>
         <Link href="/groceries">{t("Continue shopping", "বাজার করুন")}</Link>
+        <Link href="/photo-credits">{t("Photo credits", "ছবির কৃতিত্ব")}</Link>
         <button onClick={() => setBn(!bn)}>{bn ? "English" : "বাংলা"}</button>
       </nav>
       <p className="kicker">{t("YOUR MARKET BASKET", "আপনার বাজারের ঝুড়ি")}</p>
       <h1>
         {t(
-          "Good food. A little less effort.",
-          "প্রতিদিনের ভালো খাবার, একটু কম পরিশ্রম।",
+          "Your market basket. Ready for the next step.",
+          "আপনার বাজারের ঝুড়ি। পরের ধাপে এগিয়ে যান।",
         )}
       </h1>
       <div className="checkout-grid">
@@ -518,6 +445,34 @@ export function BasketCheckout() {
                       }
                     />
                   </label>
+                  {p?.category === "fresh" && (
+                    <label>
+                      {t("Preparation", "প্রস্তুতি")}
+                      <select
+                        value={l.preparation}
+                        onChange={(e) =>
+                          writeBasket(
+                            lines.map((i) =>
+                              i.sku === l.sku
+                                ? { ...i, preparation: e.target.value }
+                                : i,
+                            ),
+                          )
+                        }
+                      >
+                        {[
+                          ["whole", "Whole / raw", "আস্ত / কাঁচা"],
+                          ["cleaned", "Cleaned / washed", "পরিষ্কার / ধোয়া"],
+                          ["cut", "Cut & cleaned", "কাটা ও পরিষ্কার"],
+                          ["custom", "Custom instructions", "আপনার নির্দেশনা"],
+                        ].map(([id, en, b]) => (
+                          <option key={id} value={id}>
+                            {t(en, b)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   <button
                     className="text-button"
                     onClick={() =>
@@ -546,8 +501,8 @@ export function BasketCheckout() {
           </p>
           <p>
             {t(
-              "Delivery and availability are checked at order review.",
-              "অর্ডার পর্যালোচনায় ডেলিভারি ও প্রাপ্যতা যাচাই করা হয়।",
+              "Preparation and delivery charges are confirmed with your final quote.",
+              "প্রস্তুতি ও ডেলিভারির চার্জ চূড়ান্ত দামের সাথে নিশ্চিত করা হবে।",
             )}
           </p>
         </section>

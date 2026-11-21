@@ -25,13 +25,46 @@ def import_catalog(db, source=None):
         db.add(Product(**item))
         added += 1
     priced = import_market_prices(db)
+    photos = import_real_photos(db)
     db.commit()
     return {
         "priced": priced,
+        "photos": photos,
         "version": document["version"],
         "added": added,
         "total_source": len(document["products"]),
     }
+
+
+def import_real_photos(db):
+    path = Path(__file__).resolve().parents[1] / "catalog/real-photo-sources.json"
+    if not path.exists():
+        return 0
+    sources = json.loads(path.read_text())
+    bases = json.loads((path.parent / "bd-groceries-v1.json").read_text())
+    original = {p["sku"]: p["details"]["image"] for p in bases["products"]}
+    changed = 0
+    db.flush()
+    for product in db.scalars(select(Product)):
+        details = dict(product.details)
+        # Retain explicitly approved or changed owner photography.
+        if details.get("images_approved") or (
+            details.get("image")
+            and not details.get("photo_credit")
+            and details.get("image") != original.get(product.sku)
+        ):
+            continue
+        source = sources.get(product.sku)
+        if source:
+            details["image"] = source["image"]
+            details["photo_credit"] = {k: v for k, v in source.items() if k != "image"}
+        else:
+            # Never keep an unverified legacy/generated picture as a fallback.
+            details["image"] = ""
+            details["photo_credit"] = None
+        product.details = details
+        changed += 1
+    return changed
 
 
 def import_market_prices(db, source=None):

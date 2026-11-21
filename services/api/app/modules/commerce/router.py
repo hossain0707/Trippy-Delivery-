@@ -67,6 +67,8 @@ def configuration(db: DB):
         issues.append("No payment method has been configured.")
     return {
         "setup_issues": issues,
+        "request_intake_open": True,
+        "payments_collected": False,
         "ordering_open": c.app_env != "preview" and c.live_orders_enabled and c.pilot_approved,
         "payments": {"cod": {"enabled": payments.cod_enabled}, **result},
         "pilot": get_setting(db, "pilot", PilotSettings).model_dump(mode="json"),
@@ -187,7 +189,7 @@ def customer_order(order_id: str, db: DB, actor: Customer):
             row(l) for l in db.scalars(select(GroceryLine).where(GroceryLine.order_id == o.id))
         ],
         "history": [
-            row(e)
+            {k: v for k, v in row(e).items() if k != "actor_id"}
             for e in db.scalars(
                 select(CommerceEvent)
                 .where(
@@ -509,7 +511,6 @@ class CourierUpdate(BaseModel):
 def courier_update(payload: CourierUpdate, db: DB, actor: Customer):
     from app.modules.parcels.models import Parcel, ParcelEvent
 
-    require_live_orders()
     c = db.scalar(select(DeliveryPartner).where(DeliveryPartner.actor_id == actor.subject))
     if (
         c is None
@@ -527,6 +528,13 @@ def courier_update(payload: CourierUpdate, db: DB, actor: Customer):
     )
     if record is None:
         raise HTTPException(404, "Assignment not found")
+    request_only = (
+        record.checkout_data.get("mode") == "request_only"
+        if payload.entity == "grocery"
+        else record.package.get("request_only", False)
+    )
+    if not request_only:
+        require_live_orders()
     allowed = {
         "assigned": (
             {"out_for_delivery", "failed"}
@@ -548,7 +556,14 @@ def courier_update(payload: CourierUpdate, db: DB, actor: Customer):
         db.add(ParcelEvent(parcel_id=record.id, actor_id=actor.subject, event_type=payload.status))
     elif payload.status == "failed" and record.payment_status in ("paid", "test_paid"):
         record.payment_status = "refund_required"
-    event(db, actor, payload.entity, record.id, payload.status, {"note": payload.note})
+    event(
+        db,
+        actor,
+        "grocery_order" if payload.entity == "grocery" else "parcel",
+        record.id,
+        payload.status,
+        {"note": payload.note},
+    )
     db.commit()
     return {"status": record.status}
 

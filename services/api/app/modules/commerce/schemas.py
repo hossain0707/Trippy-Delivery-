@@ -26,6 +26,16 @@ class MarketPrice(BaseModel):
     basis: str = Field(min_length=1, max_length=300)
 
 
+class PhotoCredit(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_url: str = Field(max_length=500, pattern=r"^https://commons\.wikimedia\.org/")
+    creator: str = Field(max_length=1000)
+    license: str = Field(max_length=100)
+    license_url: str = Field(default="", max_length=500, pattern=r"^(|https?://)")
+    title: str = Field(max_length=300)
+    representative: bool = True
+
+
 class CatalogContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     department: str = Field(default="pantry", min_length=1, max_length=40)
@@ -41,6 +51,7 @@ class CatalogContent(BaseModel):
     quantity_step: Decimal = Field(default=Decimal(1), gt=0, le=50, decimal_places=3)
     catalog_version: str = Field(default="", max_length=30)
     images_approved: bool = False
+    photo_credit: PhotoCredit | None = None
     market_price: MarketPrice | None = None
 
     @model_validator(mode="after")

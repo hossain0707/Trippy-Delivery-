@@ -165,7 +165,7 @@ export function CustomerAccount() {
         TRIPPY Delivery
       </Link>
       <h1>My TRIPPY</h1>
-      <p>Preview: payments, new orders and fulfillment are disabled.</p>
+      <p>Track your saved order requests here. Payments are disabled.</p>
       <GoogleAccess>
         <Records />
       </GoogleAccess>
