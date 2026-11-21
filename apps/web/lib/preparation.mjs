@@ -18,8 +18,8 @@ export function productPhoto(product, choice, failed = [], apiBase = "") {
     !failed.includes(productImageUrl(src, apiBase));
   const uploaded =
     product.details?.photo_variants?.[choice?.id || "whole"]?.image;
-  const raw =
-    product.details?.photo_variants?.whole?.image || product.details?.image;
+  const whole = product.details?.photo_variants?.whole?.image;
+  const raw = usable(whole) ? whole : product.details?.image;
   const selected = usable(uploaded)
     ? uploaded
     : usable(choice?.image)

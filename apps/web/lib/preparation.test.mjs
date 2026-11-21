@@ -70,3 +70,22 @@ test("uploaded photos map each preparation to the persistent backend image", () 
     true,
   );
 });
+
+test("a failed uploaded whole photo falls back to the existing real product photograph", () => {
+  const path = "/api/v1/commerce/media/" + "c".repeat(40);
+  const item = {
+    details: {
+      image: "/real-products/fish-rohu.webp",
+      photo_variants: { whole: { image: path } },
+    },
+  };
+  assert.equal(
+    productPhoto(
+      item,
+      { id: "whole" },
+      ["https://api.example" + path],
+      "https://api.example",
+    ).src,
+    "/real-products/fish-rohu.webp",
+  );
+});
