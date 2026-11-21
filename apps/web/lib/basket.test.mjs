@@ -35,3 +35,23 @@ test("basket never grows beyond the checkout item limit", () => {
     50,
   );
 });
+test("piece quantities and per-kg preparation weights are independent", () => {
+  const item = {
+    unit: "piece",
+    price_bdt: "89",
+    details: {
+      preparation_options: [
+        { id: "cut", fee_bdt: "20", fee_unit: "kg", enabled: true },
+      ],
+    },
+  };
+  assert.equal(
+    lineTotal(item, {
+      preparation: "cut",
+      quantity: "2",
+      preparation_weight_kg: "1.5",
+    }),
+    208,
+  );
+  assert.equal(lineTotal(item, { preparation: "cut", quantity: "2" }), 178);
+});

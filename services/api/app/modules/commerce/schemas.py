@@ -10,6 +10,7 @@ class Preparation(BaseModel):
     name_en: str = Field(min_length=1, max_length=80)
     name_bn: str = Field(min_length=1, max_length=80)
     fee_bdt: Decimal = Field(ge=0, le=10000, decimal_places=2)
+    fee_unit: Literal["selling_unit", "kg"] = "selling_unit"
     enabled: bool = True
     yield_percent: int = Field(default=100, ge=1, le=100)
     image: str = Field(default="", max_length=300, pattern=r"^(|/[^/].*)$")
@@ -20,7 +21,7 @@ class MarketPrice(BaseModel):
     model_config = ConfigDict(extra="forbid")
     amount_bdt: Decimal = Field(gt=0, le=100000, decimal_places=2)
     unit: str = Field(min_length=1, max_length=20)
-    source_url: str = Field(max_length=300, pattern=r"^https://chaldal\.com/[a-z0-9-]+$")
+    source_url: str = Field(max_length=300, pattern=r"^https://(?:chaldal\.com/[a-z0-9-]+|agorasuperstores\.com/(?:category|products)/[a-z0-9-]+|quickybd\.com/products/[a-z0-9-]+/)$")
     source_name: str = Field(min_length=1, max_length=100)
     checked_on: date
     basis: str = Field(min_length=1, max_length=300)

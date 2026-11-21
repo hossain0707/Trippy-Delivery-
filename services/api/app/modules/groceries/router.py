@@ -20,26 +20,37 @@ from app.modules.locations.service import ensure_city_active
 router = APIRouter(prefix="/groceries", tags=["TRIPPY Groceries"])
 
 
+def display_details(product, pilot):
+    from app.modules.commerce.calculator import preparation_options
+
+    details = dict(product.details)
+    # Replace only the original generated unit sentence; preserve owner-written copy.
+    sentence = f"{product.name_en} for your everyday Bangladeshi kitchen. Sold by "
+    if details.get("description_en", "").startswith(sentence):
+        details["description_en"] = sentence + product.unit + "; final packaging and availability are confirmed by TRIPPY."
+    details["preparation_options"] = preparation_options(product, pilot)
+    return details
+
+
+
 @router.get("/products", response_model=list[ProductOut])
 def products(db: Session = Depends(get_db), q:str=Query(default="",max_length=160), department:str=Query(default="",max_length=40), sort:str=Query(default="name",pattern="^(name|price)$")):
     from sqlalchemy import or_
     query=select(Product).where(Product.active.is_(True))
     if q:query=query.where(or_(Product.name_en.ilike("%"+q+"%"),Product.name_bn.ilike("%"+q+"%")))
     if department:query=query.where(Product.details['department'].as_string()==department)
-    from app.modules.commerce.calculator import preparation_options
     from app.modules.commerce.schemas import PilotSettings
     from app.modules.commerce.service import get_setting
     pilot = get_setting(db, "pilot", PilotSettings)
-    return [ProductOut.model_validate(p).model_copy(update={"details": {**p.details, "preparation_options": preparation_options(p, pilot)}}) for p in db.scalars(query.order_by(Product.price_bdt if sort=='price' else Product.name_en).limit(500)).all()]
+    return [ProductOut.model_validate(p).model_copy(update={"details": display_details(p, pilot)}) for p in db.scalars(query.order_by(Product.price_bdt if sort=='price' else Product.name_en).limit(500)).all()]
 
 @router.get("/products/{sku}", response_model=ProductOut)
 def product_detail(sku:str,db:Session=Depends(get_db)):
     p=db.get(Product,sku)
     if p is None or not p.active:raise HTTPException(404,"Product not found")
-    from app.modules.commerce.calculator import preparation_options
     from app.modules.commerce.schemas import PilotSettings
     from app.modules.commerce.service import get_setting
-    return ProductOut.model_validate(p).model_copy(update={"details": {**p.details, "preparation_options": preparation_options(p, get_setting(db, "pilot", PilotSettings))}})
+    return ProductOut.model_validate(p).model_copy(update={"details": display_details(p, get_setting(db, "pilot", PilotSettings))})
 
 
 @router.post("/orders", response_model=OrderOut, status_code=201)
