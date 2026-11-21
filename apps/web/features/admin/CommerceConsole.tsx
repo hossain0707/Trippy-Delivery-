@@ -1,4 +1,5 @@
 "use client";
+import { API_BASE } from "@/lib/api";
 import { useCallback, useEffect, useState } from "react";
 import { useCredential } from "@/features/account/GoogleAccess";
 import {
@@ -89,6 +90,9 @@ const emptyDestination: Destination = {
 };
 export function CommerceConsole() {
   const token = useCredential();
+  const [photoRights, setPhotoRights] = useState(false);
+  const [photoCredit, setPhotoCredit] = useState("TRIPPY Delivery");
+  const [photoSource, setPhotoSource] = useState("");
   const [tab, setTab] = useState("catalog");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -158,6 +162,47 @@ export function CommerceConsole() {
       setBusy(false);
     }
   }
+  async function uploadPhoto(file: File | undefined, variant: string) {
+    if (!chosen || !file) return;
+    if (!photoRights) {
+      setStatus("Confirm photo accuracy and publication rights first.");
+      return;
+    }
+    if (file.size > 2000000) {
+      setStatus("Choose a JPEG, PNG or WebP file under 2 MB.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const encoded = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1]);
+        reader.onerror = () => reject(new Error("Could not read photo"));
+        reader.readAsDataURL(file);
+      });
+      const result = await commerceApi<{ details: Product["details"] }>(
+        "/admin/commerce/catalog/" +
+          encodeURIComponent(chosen.sku) +
+          "/photos/" +
+          variant,
+        token,
+        "PUT",
+        {
+          image_base64: encoded,
+          real_photo_and_rights_confirmed: true,
+          credit: photoCredit,
+          source_url: photoSource,
+        },
+      );
+      setChosen({ ...chosen, details: result.details });
+      setStatus("Real product photo saved to the database and published.");
+      await load();
+    } catch (e) {
+      setStatus((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   const updateContent = (field: string, value: unknown) =>
     chosen &&
     setChosen({ ...chosen, details: { ...chosen.details, [field]: value } });
@@ -209,7 +254,9 @@ export function CommerceConsole() {
               <option value="">Choose a product</option>
               {products.map((p) => (
                 <option key={p.sku} value={p.sku}>
-                  {p.name_en} / {p.name_bn}
+                  {p.name_en} / {p.name_bn} ·{" "}
+                  {Object.keys(p.details.photo_variants || {}).length} uploaded
+                  photos
                 </option>
               ))}
             </select>
@@ -224,6 +271,96 @@ export function CommerceConsole() {
                 );
               }}
             >
+              <fieldset>
+                <legend>Real product photography</legend>
+                <p>
+                  Use bright, sharp photos of this exact product. Raw:
+                  attractive whole product. Clean: cleaned and transparently
+                  packed. Cut: cut and transparently packed. Cut &amp; clean:
+                  cleaned, cut and neatly sealed in clear packaging. Use at
+                  least 400 × 400 pixels, up to 16 megapixels and 2 MB. Uploads
+                  are saved immediately; save other product changes first.
+                </p>
+                <label>
+                  Photographer / credit
+                  <input
+                    value={photoCredit}
+                    onChange={(e) => setPhotoCredit(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Source URL (optional)
+                  <input
+                    type="url"
+                    value={photoSource}
+                    onChange={(e) => setPhotoSource(e.target.value)}
+                  />
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={photoRights}
+                    onChange={(e) => setPhotoRights(e.target.checked)}
+                  />
+                  I confirm these are real photos of this product and selected
+                  preparation, and I have rights to publish them.
+                </label>
+                <div className="photo-upload-grid">
+                  {(
+                    [
+                      "whole",
+                      ...(chosen.category === "fresh" &&
+                      !["EGGS", "BEEF-MINCE", "JACKFRUIT-PODS"].includes(
+                        chosen.sku,
+                      ) &&
+                      !["dairy", "bakery"].includes(
+                        chosen.details.department || "",
+                      )
+                        ? ["cleaned", "cut-only", "cut"]
+                        : []),
+                    ] as const
+                  ).map((variant) => {
+                    const photo =
+                      chosen.details.photo_variants?.[
+                        variant as "whole" | "cleaned" | "cut-only" | "cut"
+                      ];
+                    return (
+                      <label key={variant}>
+                        {
+                          (
+                            {
+                              whole: "Raw / whole",
+                              cleaned: "Clean + clear packaging",
+                              "cut-only": "Cut + clear packaging",
+                              cut: "Cut & clean + clear packaging",
+                            } as Record<string, string>
+                          )[variant]
+                        }
+                        {photo && (
+                          <>
+                            <img
+                              src={API_BASE + photo.image}
+                              alt={chosen.name_en + " " + variant}
+                              width="240"
+                              height="180"
+                            />
+                            <small>{photo.credit}</small>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={busy || !photoRights}
+                          onChange={(e) => {
+                            void uploadPhoto(e.target.files?.[0], variant);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
               <div className="fields">
                 <label>
                   Department

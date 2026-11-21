@@ -21,7 +21,10 @@ class MarketPrice(BaseModel):
     model_config = ConfigDict(extra="forbid")
     amount_bdt: Decimal = Field(gt=0, le=100000, decimal_places=2)
     unit: str = Field(min_length=1, max_length=20)
-    source_url: str = Field(max_length=300, pattern=r"^https://(?:chaldal\.com/[a-z0-9-]+|agorasuperstores\.com/(?:category|products)/[a-z0-9-]+|quickybd\.com/products/[a-z0-9-]+/)$")
+    source_url: str = Field(
+        max_length=300,
+        pattern=r"^https://(?:chaldal\.com/[a-z0-9-]+|agorasuperstores\.com/(?:category|products)/[a-z0-9-]+|quickybd\.com/products/[a-z0-9-]+/)$",
+    )
     source_name: str = Field(min_length=1, max_length=100)
     checked_on: date
     basis: str = Field(min_length=1, max_length=300)
@@ -37,8 +40,19 @@ class PhotoCredit(BaseModel):
     representative: bool = True
 
 
+class ProductPhoto(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    image: str = Field(pattern=r"^/api/v1/commerce/media/[a-f0-9]{40}$")
+    credit: str = Field(min_length=1, max_length=200)
+    source_url: str = Field(default="", max_length=500, pattern=r"^(|https://[^\s]+)$")
+    uploaded_at: AwareDatetime
+
+
 class CatalogContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    photo_variants: dict[Literal["whole", "cleaned", "cut-only", "cut"], ProductPhoto] = Field(
+        default_factory=dict
+    )
     department: str = Field(default="pantry", min_length=1, max_length=40)
     description_en: str = Field(default="", max_length=1500)
     description_bn: str = Field(default="", max_length=1500)
@@ -123,8 +137,12 @@ class PilotSettings(BaseModel):
     delivery_base_area: str = Field(default="Uttara", min_length=2, max_length=80)
     delivery_base_fee_bdt: Decimal | None = Field(default=None, ge=0, le=5000, decimal_places=2)
     delivery_per_km_bdt: Decimal | None = Field(default=None, ge=0, le=1000, decimal_places=2)
-    preparation_cleaned_fee_bdt: Decimal | None = Field(default=None, ge=0, le=10000, decimal_places=2)
-    preparation_cut_only_fee_bdt: Decimal | None = Field(default=None, ge=0, le=10000, decimal_places=2)
+    preparation_cleaned_fee_bdt: Decimal | None = Field(
+        default=None, ge=0, le=10000, decimal_places=2
+    )
+    preparation_cut_only_fee_bdt: Decimal | None = Field(
+        default=None, ge=0, le=10000, decimal_places=2
+    )
     preparation_cut_fee_bdt: Decimal | None = Field(default=None, ge=0, le=10000, decimal_places=2)
     dhaka_delivery_fee_bdt: Decimal | None = Field(default=None, ge=0, le=5000, decimal_places=2)
     model_config = ConfigDict(extra="forbid")

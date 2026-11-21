@@ -6,18 +6,28 @@ export function preparationOptions(product) {
 
 // The API exposes preparation images only after owner approval.
 // Never substitute a generated legacy picture or mislabel a whole photo as prepared.
-export function productPhoto(product, choice, failed = []) {
+export function productImageUrl(src, apiBase = "") {
+  return src?.startsWith("/api/v1/commerce/media/") ? apiBase + src : src;
+}
+export function productPhoto(product, choice, failed = [], apiBase = "") {
   const usable = (src) =>
     typeof src === "string" &&
     src.startsWith("/") &&
     !src.startsWith("//") &&
     !src.startsWith("/preparation/") &&
-    !failed.includes(src);
-  const selected = usable(choice?.image) ? choice.image : "";
+    !failed.includes(productImageUrl(src, apiBase));
+  const uploaded =
+    product.details?.photo_variants?.[choice?.id || "whole"]?.image;
+  const whole = product.details?.photo_variants?.whole?.image;
+  const raw = usable(whole) ? whole : product.details?.image;
+  const selected = usable(uploaded)
+    ? uploaded
+    : usable(choice?.image)
+      ? choice.image
+      : "";
   const prepared = !!selected && choice?.id !== "whole";
   return {
-    src:
-      selected || (usable(product.details?.image) ? product.details.image : ""),
+    src: productImageUrl(selected || (usable(raw) ? raw : ""), apiBase),
     prepared,
     missingPreparation:
       !!choice && !["whole", "none"].includes(choice.id) && !prepared,
