@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 from typing import Literal
 
@@ -15,6 +16,16 @@ class Preparation(BaseModel):
     notes: str = Field(default="", max_length=500)
 
 
+class MarketPrice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    amount_bdt: Decimal = Field(gt=0, le=100000, decimal_places=2)
+    unit: str = Field(min_length=1, max_length=20)
+    source_url: str = Field(max_length=300, pattern=r"^https://chaldal\.com/[a-z0-9-]+$")
+    source_name: str = Field(min_length=1, max_length=100)
+    checked_on: date
+    basis: str = Field(min_length=1, max_length=300)
+
+
 class CatalogContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     department: str = Field(default="pantry", min_length=1, max_length=40)
@@ -30,6 +41,7 @@ class CatalogContent(BaseModel):
     quantity_step: Decimal = Field(default=Decimal(1), gt=0, le=50, decimal_places=3)
     catalog_version: str = Field(default="", max_length=30)
     images_approved: bool = False
+    market_price: MarketPrice | None = None
 
     @model_validator(mode="after")
     def unique_options(self):

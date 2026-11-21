@@ -1,0 +1,375 @@
+{
+  "version": "market-2026-11-21",
+  "policy": "Owner requested market-based initial selling prices. Retail comparisons checked on this date, not a real-time market feed. Stock and fulfillment are independent.",
+  "prices": [
+    {
+      "sku": "VEG-POTATO",
+      "amount_bdt": "29",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Regular potato, 1 kg"
+    },
+    {
+      "sku": "TOMATO",
+      "amount_bdt": "198",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Red tomato: BDT 99 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "CORIANDER",
+      "amount_bdt": "250",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Coriander leaves: BDT 25 per 100 g; multiplied by 10"
+    },
+    {
+      "sku": "GARLIC",
+      "amount_bdt": "158",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Imported garlic: BDT 79 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "CHILLI",
+      "amount_bdt": "356",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Green chilli: BDT 89 per 250 g; multiplied by 4"
+    },
+    {
+      "sku": "RED-SPINACH",
+      "amount_bdt": "29",
+      "unit": "bundle",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Red amaranth, one bundle; not a kilogram"
+    },
+    {
+      "sku": "CUCUMBER",
+      "amount_bdt": "78",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Local cucumber: BDT 39 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "PUMPKIN",
+      "amount_bdt": "59",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Sweet pumpkin slice, 1 kg"
+    },
+    {
+      "sku": "RAW-PAPAYA",
+      "amount_bdt": "42.14",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Green papaya: BDT 59 per 1.4 kg; divided by 1.4, rounded to paisa"
+    },
+    {
+      "sku": "GINGER",
+      "amount_bdt": "170",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Local ginger: BDT 85 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "VEG-SPINACH",
+      "amount_bdt": "35",
+      "unit": "bundle",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Spinach, one bundle; not a kilogram"
+    },
+    {
+      "sku": "SNAKE-GOURD",
+      "amount_bdt": "90",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Snake gourd: BDT 45 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "LEMON",
+      "amount_bdt": "7.25",
+      "unit": "piece",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Long lemon: BDT 29 per four; divided by 4"
+    },
+    {
+      "sku": "VEG-GOURD",
+      "amount_bdt": "89",
+      "unit": "piece",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Bottle gourd, each; no weight conversion"
+    },
+    {
+      "sku": "MALABAR",
+      "amount_bdt": "39",
+      "unit": "bundle",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Malabar spinach, one bundle"
+    },
+    {
+      "sku": "BITTER-GOURD",
+      "amount_bdt": "150",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Bitter gourd: BDT 75 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "CAULIFLOWER",
+      "amount_bdt": "69",
+      "unit": "piece",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Cauliflower, each; no weight conversion"
+    },
+    {
+      "sku": "TARO",
+      "amount_bdt": "90",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Taro roots: BDT 45 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "VEG-EGGPLANT",
+      "amount_bdt": "158",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Long black brinjal: BDT 79 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "RADISH",
+      "amount_bdt": "70",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-vegetable",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Radish: BDT 35 per 500 g; multiplied by 2"
+    },
+    {
+      "sku": "BANANA",
+      "amount_bdt": "55",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Sagor banana, four pieces; not a kilogram"
+    },
+    {
+      "sku": "GUAVA",
+      "amount_bdt": "119",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Premium guava, 1 kg"
+    },
+    {
+      "sku": "COCONUT",
+      "amount_bdt": "149",
+      "unit": "piece",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Green coconut, each"
+    },
+    {
+      "sku": "APPLE",
+      "amount_bdt": "399",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "China Fuji apple, 1 kg"
+    },
+    {
+      "sku": "PAPAYA",
+      "amount_bdt": "179",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Ripe papaya, 1 kg"
+    },
+    {
+      "sku": "ORANGE",
+      "amount_bdt": "359",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Imported orange, 1 kg"
+    },
+    {
+      "sku": "PINEAPPLE",
+      "amount_bdt": "79",
+      "unit": "piece",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Pineapple, each; no weight conversion"
+    },
+    {
+      "sku": "GRAPES",
+      "amount_bdt": "636",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/fresh-fruit",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Green grapes: BDT 159 per 250 g; multiplied by 4"
+    },
+    {
+      "sku": "CHICKEN",
+      "amount_bdt": "319",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/meat-new",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Broiler chicken skin-on, 1 kg; dressed retail, not live-weight chicken"
+    },
+    {
+      "sku": "BEEF",
+      "amount_bdt": "799",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/meat-new",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Beef bone-in, 1 kg; not boneless"
+    },
+    {
+      "sku": "BEEF-MINCE",
+      "amount_bdt": "1050",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/meat-new",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Bengal Meat beef mince, 1 kg; branded comparator"
+    },
+    {
+      "sku": "RICE",
+      "amount_bdt": "77.80",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/rices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Standard Miniket: BDT 389 per 5 kg; divided by 5"
+    },
+    {
+      "sku": "NAZIRSHAIL",
+      "amount_bdt": "79.80",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/rices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Standard Nazirshail: BDT 399 per 5 kg; divided by 5"
+    },
+    {
+      "sku": "CHINIGURA",
+      "amount_bdt": "169",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/rices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Premium Chinigura rice, 1 kg"
+    },
+    {
+      "sku": "ATOP",
+      "amount_bdt": "59",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/rices",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Atop rice, 1 kg"
+    },
+    {
+      "sku": "SALT",
+      "amount_bdt": "42",
+      "unit": "kg",
+      "source_url": "https://chaldal.com/top-items",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "ACI Pure iodized salt, 1 kg; branded comparator"
+    },
+    {
+      "sku": "EGGS",
+      "amount_bdt": "120.83",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/top-items",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Layer eggs: BDT 145 per dozen; normalized to 10 eggs, rounded to paisa"
+    },
+    {
+      "sku": "WASH",
+      "amount_bdt": "290",
+      "unit": "L",
+      "source_url": "https://chaldal.com/top-items",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Trix lemon dishwashing liquid: BDT 145 per 500 ml; multiplied by 2"
+    },
+    {
+      "sku": "CINNAMON",
+      "amount_bdt": "75",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/top-items",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Whole cinnamon, 100 g pack"
+    },
+    {
+      "sku": "TEA",
+      "amount_bdt": "149",
+      "unit": "pack",
+      "source_url": "https://chaldal.com/top-items",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Tata Tea Premium, 400 g pack"
+    },
+    {
+      "sku": "MILK",
+      "amount_bdt": "105",
+      "unit": "L",
+      "source_url": "https://chaldal.com/top-items",
+      "source_name": "Chaldal Dhaka retail listing",
+      "checked_on": "2026-11-21",
+      "basis": "Aarong pasteurized liquid milk, 1 litre"
+    }
+  ]
+}

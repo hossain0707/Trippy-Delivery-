@@ -52,7 +52,21 @@ def configuration(db: DB):
                 "instructions": "Not configured. Do not send money to demonstration numbers.",
             }
         )
+    pilot = get_setting(db, "pilot", PilotSettings)
+    issues = []
+    if c.app_env == "preview" or not (c.live_orders_enabled and c.pilot_approved):
+        issues.append("Ordering has not been activated on the server.")
+    if not any(
+        z.active and z.preparation_ready and z.courier_ready and z.capacity_per_slot > 0
+        for z in pilot.zones
+    ):
+        issues.append("No delivery area has confirmed preparation and courier capacity.")
+    if not payments.cod_enabled and not any(
+        getattr(payments, name).enabled for name in ("bkash", "nagad", "rocket", "bank")
+    ):
+        issues.append("No payment method has been configured.")
     return {
+        "setup_issues": issues,
         "ordering_open": c.app_env != "preview" and c.live_orders_enabled and c.pilot_approved,
         "payments": {"cod": {"enabled": payments.cod_enabled}, **result},
         "pilot": get_setting(db, "pilot", PilotSettings).model_dump(mode="json"),

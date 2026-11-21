@@ -34,11 +34,20 @@ export type Product = {
     variants?: string[];
     images_approved?: boolean;
     catalog_version?: string;
+    market_price?: {
+      amount_bdt: string;
+      unit: string;
+      source_url: string;
+      source_name: string;
+      checked_on: string;
+      basis: string;
+    } | null;
   };
 };
 export type BasketLine = { sku: string; quantity: string; preparation: string };
 export type Configuration = {
   ordering_open: boolean;
+  setup_issues?: string[];
   payments: Record<
     string,
     {

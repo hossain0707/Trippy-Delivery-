@@ -153,6 +153,30 @@ function CheckoutForm({
           </button>
         )}
       </div>
+      {configuration && !configuration.ordering_open && (
+        <aside className="shopping-note" role="note">
+          <h3>
+            {t(
+              "Checkout is being prepared. Your basket is saved.",
+              "অর্ডার সেবা প্রস্তুত হচ্ছে। আপনার ঝুড়ি সংরক্ষিত আছে।",
+            )}
+          </h3>
+          <p>
+            {t(
+              "Your items can be saved. Orders and money transfers are not being accepted yet.",
+              "আপনার পণ্য সংরক্ষণ করা যাবে। এখনো অর্ডার বা টাকা গ্রহণ করা হচ্ছে না।",
+            )}
+          </p>
+          <ul>
+            {configuration.setup_issues?.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+          <Link href="/support">
+            {t("Contact TRIPPY", "ট্রিপির সাথে যোগাযোগ করুন")}
+          </Link>
+        </aside>
+      )}
       <form
         onChange={() => setReview(null)}
         onSubmit={async (e) => {
@@ -506,8 +530,19 @@ export function BasketCheckout() {
               </article>
             );
           })}
+          {lines.some(
+            (l) => !products.find((p) => p.sku === l.sku)?.price_approved,
+          ) && (
+            <p className="shopping-note">
+              {t(
+                "Some shopping-list items still need a price. They are excluded from this subtotal; they are not free.",
+                "তালিকার কিছু পণ্যের দাম নিশ্চিত হয়নি। সেগুলো এই মোটে যোগ হয়নি; বিনামূল্যে নয়।",
+              )}
+            </p>
+          )}
           <p className="price-line">
-            {t("Item subtotal", "পণ্যের মোট")}: {money(subtotal, bn)}
+            {t("Priced items subtotal", "দামসহ পণ্যের মোট")}:{" "}
+            {money(subtotal, bn)}
           </p>
           <p>
             {t(
