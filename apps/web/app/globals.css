@@ -56,3 +56,11 @@
 
 /* Keep the entire photographed product visible in a consistent light frame. */
 .compact-product .product-photo,.product-detail-grid .product-photo{background:#fff}.compact-product .product-photo img{object-fit:contain;padding:.5rem;box-sizing:border-box;background:#fff}.product-detail-grid .product-photo img{object-fit:contain;background:#fff}
+
+/* Generated raster atlas cells share the same contained product image geometry. */
+.product-photo .catalog-product-image{display:block;width:100%;height:100%;object-fit:contain;background:#faf7ef}
+.product-detail-grid .product-photo .catalog-product-image{min-height:340px}
+.ai-preview-label{display:block;color:#57685f;font-size:.72rem;line-height:1.4;margin:.2rem 0 .5rem}
+.basket-product-image{width:76px;height:76px;flex:0 0 76px;overflow:hidden;border-radius:.65rem;background:#faf7ef}
+.basket-product-image .catalog-product-image{display:block;width:100%;height:100%;object-fit:contain}
+@media(max-width:600px){.product-detail-grid .product-photo .catalog-product-image{min-height:250px}.basket-product-image{width:60px;height:60px;flex-basis:60px}}

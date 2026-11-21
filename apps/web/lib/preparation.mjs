@@ -1,3 +1,5 @@
+import { catalogPreviews } from "./catalog-previews.mjs";
+
 export function preparationOptions(product) {
   return product.category === "fresh"
     ? product.details?.preparation_options || []
@@ -25,6 +27,35 @@ export function productPhoto(product, choice, failed = [], apiBase = "") {
     : usable(choice?.image)
       ? choice.image
       : "";
+  // Use the owner's earlier catalog style only as an explicitly labeled AI preview.
+  // Preserve verified uploads and any explicitly approved owner photography.
+  const preview = catalogPreviews[product.sku];
+  const variant = choice?.id === "none" ? "whole" : choice?.id || "whole";
+  const column = { whole: 0, cleaned: 1, "cut-only": 2, cut: 3 }[variant];
+  if (
+    !selected &&
+    !(variant === "whole" && usable(whole)) &&
+    !product.details?.images_approved &&
+    preview &&
+    column !== undefined
+  ) {
+    const atlas = usable(preview.sheet) && column >= 0;
+    const src = atlas
+      ? preview.sheet
+      : variant === "whole" && usable(preview.whole)
+        ? preview.whole
+        : "";
+    if (src)
+      return {
+        src,
+        prepared: variant !== "whole",
+        missingPreparation: false,
+        generated: true,
+        ...(atlas
+          ? { tile: { column, row: preview.row, columns: 4, rows: 4 } }
+          : {}),
+      };
+  }
   const prepared = !!selected && choice?.id !== "whole";
   return {
     src: productImageUrl(selected || (usable(raw) ? raw : ""), apiBase),

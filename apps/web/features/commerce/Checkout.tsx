@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ProductImage } from "./ProductImage";
 import { API_BASE } from "@/lib/api";
 import { productPhoto, preparationOptions } from "@/lib/preparation.mjs";
 import { useEffect, useRef, useState } from "react";
@@ -591,27 +592,43 @@ export function BasketCheckout() {
           )}
           {lines.map((l) => {
             const p = products.find((p) => p.sku === l.sku);
+            const photo = p
+              ? productPhoto(
+                  p,
+                  p.details.preparation_options?.find(
+                    (o) => o.id === l.preparation,
+                  ) ||
+                    ({ id: l.preparation } as Parameters<
+                      typeof productPhoto
+                    >[1]),
+                  [],
+                  API_BASE,
+                )
+              : null;
             return (
               <article className="basket-line" key={l.sku}>
-                {p?.details.image && (
-                  <img
-                    src={
-                      productPhoto(
-                        p,
-                        p.details.preparation_options?.find(
-                          (o) => o.id === l.preparation,
-                        ),
-                        [],
-                        API_BASE,
-                      ).src
-                    }
-                    alt=""
-                    width="76"
-                    height="76"
-                  />
+                {photo && (
+                  <div className="basket-product-image">
+                    <ProductImage
+                      photo={photo}
+                      alt={
+                        (p ? (bn ? p.name_bn : p.name_en) : l.sku) +
+                        (photo.generated
+                          ? t(" · AI-generated preview", " · এআই-তৈরি নমুনা")
+                          : "")
+                      }
+                      width={76}
+                      height={76}
+                    />
+                  </div>
                 )}
                 <div>
                   <h3>{p ? (bn ? p.name_bn : p.name_en) : l.sku}</h3>
+                  {photo?.generated && (
+                    <small className="ai-preview-label">
+                      {t("AI-generated preview", "এআই-তৈরি নমুনা")}
+                    </small>
+                  )}
                   <p>
                     {l.quantity} {p?.unit} · {l.preparation}
                   </p>
