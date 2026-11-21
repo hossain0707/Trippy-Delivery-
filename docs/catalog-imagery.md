@@ -6,7 +6,7 @@ The 16 WebP atlases in `apps/web/public/catalog-previews/` provide 4 states for 
 
 Rendering uses a clipped inline SVG viewport around a single raster cell, preserving its aspect ratio at any card size; no generated SVG or external active content is loaded. A nested viewport prevents neighboring atlas cells appearing in wide cards. Product cards, detail pages and baskets share this renderer. Failed image sources are excluded and retain the existing honest fallback. Credits for a licensed photo are not displayed against an AI-generated replacement.
 
-Generation used the built-in image-generation tool, followed only by lossless layout-preserving WebP optimization. Original PNG files remain unchanged outside the repository. Generated assets are identifiable by their UI label in English and Bengali and by this registry; they do not assert the appearance, quantity or preparation of actual stock.
+Generation used the built-in image-generation tool, followed only by layout-preserving WebP encoding. Original PNG files remain unchanged outside the repository. Generated assets are identifiable by their UI label in English and Bengali and by this registry; they do not assert the appearance, quantity or preparation of actual stock.
 
 ## Common prompt
 
