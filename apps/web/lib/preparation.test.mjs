@@ -45,3 +45,28 @@ test("legacy generated preparations and external image paths cannot be used as r
     false,
   );
 });
+test("uploaded photos map each preparation to the persistent backend image", () => {
+  const id = "a".repeat(40);
+  const item = {
+    details: {
+      image: "/real-products/fish-rohu.webp",
+      photo_variants: {
+        whole: { image: "/api/v1/commerce/media/" + id },
+        cut: { image: "/api/v1/commerce/media/" + "b".repeat(40) },
+      },
+    },
+  };
+  assert.equal(
+    productPhoto(item, { id: "whole" }, [], "https://api.example").src,
+    "https://api.example/api/v1/commerce/media/" + id,
+  );
+  assert.equal(
+    productPhoto(item, { id: "cut" }, [], "https://api.example").prepared,
+    true,
+  );
+  assert.equal(
+    productPhoto(item, { id: "cleaned" }, [], "https://api.example")
+      .missingPreparation,
+    true,
+  );
+});

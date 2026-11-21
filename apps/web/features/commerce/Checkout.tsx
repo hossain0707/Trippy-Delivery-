@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { preparationOptions } from "@/lib/preparation.mjs";
+import { API_BASE } from "@/lib/api";
+import { productPhoto, preparationOptions } from "@/lib/preparation.mjs";
 import { useEffect, useRef, useState } from "react";
 import { GoogleAccess, useCredential } from "@/features/account/GoogleAccess";
 import {
@@ -593,7 +594,21 @@ export function BasketCheckout() {
             return (
               <article className="basket-line" key={l.sku}>
                 {p?.details.image && (
-                  <img src={p.details.image} alt="" width="76" height="76" />
+                  <img
+                    src={
+                      productPhoto(
+                        p,
+                        p.details.preparation_options?.find(
+                          (o) => o.id === l.preparation,
+                        ),
+                        [],
+                        API_BASE,
+                      ).src
+                    }
+                    alt=""
+                    width="76"
+                    height="76"
+                  />
                 )}
                 <div>
                   <h3>{p ? (bn ? p.name_bn : p.name_en) : l.sku}</h3>

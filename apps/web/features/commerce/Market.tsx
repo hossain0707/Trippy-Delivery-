@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { API_BASE } from "@/lib/api";
 import { searchScore } from "@/lib/search.mjs";
 import { productPhoto, preparationOptions } from "@/lib/preparation.mjs";
 import { useEffect, useState } from "react";
@@ -213,7 +214,10 @@ export function Market({
           const choice = options.find(
             (o) => o.id === (prep[p.sku] || options.find((o) => o.enabled)?.id),
           );
-          const photo = productPhoto(p, choice, failedPhotos);
+          const photo = productPhoto(p, choice, failedPhotos, API_BASE);
+          const uploadedCredit = Object.values(
+            p.details.photo_variants || {},
+          ).find((v) => v && API_BASE + v.image === photo.src);
           const priced = p.price_approved && Number(p.price_bdt) > 0;
           const available = priced && Number(p.stock_qty) > 0;
           return (
@@ -278,7 +282,7 @@ export function Market({
                     <p>
                       {bn ? p.details.description_bn : p.details.description_en}
                     </p>
-                    {p.details.photo_credit && (
+                    {!uploadedCredit && p.details.photo_credit && (
                       <small className="photo-credit">
                         <a
                           href={p.details.photo_credit.source_url}
@@ -288,6 +292,24 @@ export function Market({
                           {p.details.photo_credit.creator} ·{" "}
                           {p.details.photo_credit.license}
                         </a>
+                      </small>
+                    )}
+                    {uploadedCredit && (
+                      <small className="photo-credit">
+                        {uploadedCredit.credit}
+                        {uploadedCredit.source_url && (
+                          <>
+                            {" "}
+                            ·{" "}
+                            <a
+                              href={uploadedCredit.source_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {t("Photo source", "ছবির উৎস")}
+                            </a>
+                          </>
+                        )}
                       </small>
                     )}
                   </>

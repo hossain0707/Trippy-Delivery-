@@ -13,6 +13,7 @@ from app.modules.parcels.router import router as parcels
 from app.modules.operations.router import router as operations
 from app.modules.commerce.router import router as commerce, admin as commerce_admin
 from app.modules.commerce.requests import router as order_requests
+from app.modules.commerce.media import router as product_media
 
 configure_logs()
 config = settings()
@@ -86,6 +87,7 @@ app.add_middleware(
 
 
 app.include_router(order_requests, prefix="/api/v1")
+app.include_router(product_media, prefix="/api/v1")
 app.include_router(commerce, prefix="/api/v1")
 app.include_router(commerce_admin, prefix="/api/v1")
 app.include_router(parcels, prefix="/api/v1")

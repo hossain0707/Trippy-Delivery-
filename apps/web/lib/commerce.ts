@@ -22,6 +22,17 @@ export type Product = {
   price_approved: boolean;
   active: boolean;
   details: {
+    photo_variants?: Partial<
+      Record<
+        "whole" | "cleaned" | "cut-only" | "cut",
+        {
+          image: string;
+          credit: string;
+          source_url: string;
+          uploaded_at: string;
+        }
+      >
+    >;
     department?: string;
     description_en?: string;
     description_bn?: string;
