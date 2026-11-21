@@ -35,6 +35,7 @@ async def preview_write_guard(request: Request, call_next):
                 "/api/v1/parcels/quote",
                 "/api/v1/parcels/requests",
                 "/api/v1/commerce/review",
+                "/api/v1/commerce/preview-orders",
                 "/api/v1/commerce/order-requests",
                 "/api/v1/commerce/order-requests/review",
                 "/api/v1/commerce/courier/application",

@@ -54,6 +54,7 @@ export type Product = {
 };
 export type BasketLine = { sku: string; quantity: string; preparation: string };
 export type Configuration = {
+  preview_checkout?: boolean;
   ordering_open: boolean;
   setup_issues?: string[];
   payments: Record<
@@ -71,6 +72,9 @@ export type Configuration = {
     }
   >;
   pilot: {
+    delivery_base_area?: string;
+    delivery_base_fee_bdt?: string | null;
+    delivery_per_km_bdt?: string | null;
     zones: { city: string; area: string; active: boolean; fee_bdt: string }[];
     contact_phone: string;
     support_email: string;

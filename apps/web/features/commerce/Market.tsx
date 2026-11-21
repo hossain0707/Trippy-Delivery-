@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { searchScore } from "@/lib/search.mjs";
+import { preparationOptions } from "@/lib/preparation.mjs";
 import { useEffect, useState } from "react";
 import {
   commerceApi,
@@ -32,7 +33,6 @@ export function Market({
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
   const [drawer, setDrawer] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(24);
   const [basket, setBasket] = useState<BasketLine[]>([]);
   const t = (en: string, b: string) => (bn ? b : en);
   useEffect(() => {
@@ -53,27 +53,6 @@ export function Market({
       active = false;
     };
   }, []);
-  function preparationOptions(p: Product) {
-    if (p.category !== "fresh") return [];
-    return [
-      { id: "whole", name_en: "Whole / raw", name_bn: "আস্ত / কাঁচা" },
-      { id: "cleaned", name_en: "Cleaned / washed", name_bn: "পরিষ্কার / ধোয়া" },
-      { id: "cut", name_en: "Cut & cleaned", name_bn: "কাটা ও পরিষ্কার" },
-      {
-        id: "custom",
-        name_en: "Custom preparation",
-        name_bn: "আপনার নির্দেশনা অনুযায়ী",
-      },
-    ].map((v) => ({
-      ...v,
-      enabled: true,
-      fee_bdt: "0",
-      yield_percent: 100,
-      image: "",
-      notes:
-        "Preparation request; final cost and yield confirmed with your quote.",
-    }));
-  }
   const names: Record<string, string[]> = {
     vegetables: ["Vegetables & greens", "সবজি ও শাক"],
     fish: ["Fish & seafood", "মাছ ও চিংড়ি"],
@@ -91,19 +70,17 @@ export function Market({
       (p) =>
         (!detail || p.sku === selected) &&
         (department === "all" || p.details.department === department) &&
-        searchScore(p, query) > 0,
+        (!query.trim() || searchScore(p, query) > 0),
     )
     .sort((a, b) =>
-      query.trim()
-        ? searchScore(b, query) - searchScore(a, query)
-        : sort === "price"
-          ? Number(a.price_bdt) - Number(b.price_bdt)
-          : sort === "availability"
-            ? Number(b.price_approved) - Number(a.price_approved) ||
-              Number(b.stock_qty) - Number(a.stock_qty)
-            : (bn ? a.name_bn : a.name_en).localeCompare(
-                bn ? b.name_bn : b.name_en,
-              ),
+      sort === "price"
+        ? Number(a.price_bdt) - Number(b.price_bdt)
+        : sort === "availability"
+          ? Number(b.price_approved) - Number(a.price_approved) ||
+            Number(b.stock_qty) - Number(a.stock_qty)
+          : (bn ? a.name_bn : a.name_en).localeCompare(
+              bn ? b.name_bn : b.name_en,
+            ),
     );
   function add(p: Product) {
     const options = preparationOptions(p);
@@ -171,10 +148,7 @@ export function Market({
               <input
                 type="search"
                 value={query}
-                onChange={(e) => (
-                  setQuery(e.target.value),
-                  setVisibleCount(24)
-                )}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder={t(
                   "Try fish, rice or tomatoes",
                   "মাছ, চাল বা টমেটো খুঁজুন",
@@ -208,7 +182,7 @@ export function Market({
               <button
                 key={id}
                 aria-pressed={department === id}
-                onClick={() => (setDepartment(id), setVisibleCount(24))}
+                onClick={() => setDepartment(id)}
               >
                 {n[bn ? 1 : 0]}
               </button>
@@ -223,17 +197,17 @@ export function Market({
       </p>
       <div className="shopping-note" role="note">
         <strong>
-          {t("Order groceries, your way", "আপনার পছন্দে বাজার করুন")}
+          {t("Plan your market basket", "আপনার বাজারের ঝুড়ি সাজান")}
         </strong>
         <p>
           {t(
-            "Choose your groceries and preparation, add delivery details, and submit a request. TRIPPY confirms availability and the final quote. No payment is collected.",
-            "পণ্য ও প্রস্তুতি বেছে ডেলিভারির তথ্য দিয়ে অনুরোধ পাঠান। ট্রিপি প্রাপ্যতা ও চূড়ান্ত দাম নিশ্চিত করবে। কোনো পেমেন্ট নেওয়া হচ্ছে না।",
+            "Choose quantities and save your basket. Adding items does not reserve inventory. Confirmed stock, delivery and payment setup are required before placing a real order.",
+            "পরিমাণ বেছে ঝুড়ি সংরক্ষণ করুন। ঝুড়িতে রাখলে মজুত সংরক্ষিত হয় না। প্রকৃত অর্ডারের আগে মজুত, ডেলিভারি ও পেমেন্ট ব্যবস্থা নিশ্চিত করা প্রয়োজন।",
           )}
         </p>
       </div>
       <div className={detail ? "product-detail-grid" : "market-grid"}>
-        {shown.slice(0, detail ? 1 : visibleCount).map((p) => {
+        {shown.map((p) => {
           const options = preparationOptions(p);
           const choice = options.find(
             (o) => o.id === (prep[p.sku] || options.find((o) => o.enabled)?.id),
@@ -242,34 +216,25 @@ export function Market({
           const available = priced && Number(p.stock_qty) > 0;
           return (
             <article key={p.sku} className="market-product">
-              {p.details.image && (
-                <Link
-                  className="product-photo"
-                  href={"/product?sku=" + encodeURIComponent(p.sku)}
-                >
-                  {p.details.image ? (
-                    <img
-                      src={p.details.image}
-                      alt={bn ? p.name_bn : p.name_en}
-                      loading="lazy"
-                      width="400"
-                      height="320"
-                    />
-                  ) : (
-                    <p className="photo-unavailable">
-                      {t(
-                        "Product photograph unavailable",
-                        "পণ্যের ছবি পাওয়া যাচ্ছে না",
-                      )}
-                    </p>
-                  )}
-                  {p.details.seasonal && (
-                    <span className="season-tag">{t("Seasonal", "মৌসুমি")}</span>
-                  )}
-                </Link>
-              )}
+              <Link
+                className="product-photo"
+                href={"/product?sku=" + encodeURIComponent(p.sku)}
+              >
+                {p.details.image ? (
+                  <img
+                    src={p.details.image}
+                    alt={bn ? p.name_bn : p.name_en}
+                    loading="lazy"
+                    width="400"
+                    height="320"
+                  />
+                ) : null}
+                {p.details.seasonal && (
+                  <span className="season-tag">{t("Seasonal", "মৌসুমি")}</span>
+                )}
+              </Link>
               {p.details.photo_credit && (
-                <p className="photo-credit">
+                <small className="photo-credit">
                   <a
                     href={p.details.photo_credit.source_url}
                     target="_blank"
@@ -278,11 +243,7 @@ export function Market({
                     {p.details.photo_credit.creator} ·{" "}
                     {p.details.photo_credit.license}
                   </a>
-                  <span>
-                    {" "}
-                    · {t("Representative photograph", "প্রতিনিধিত্বমূলক আলোকচিত্র")}
-                  </span>
-                </p>
+                </small>
               )}
               <div className="product-content">
                 <p className="product-department">
@@ -341,7 +302,7 @@ export function Market({
                 )}
                 {options.length > 0 && (
                   <label>
-                    {t("Preparation request", "প্রস্তুতির অনুরোধ")}
+                    {t("How would you like it?", "কীভাবে নিতে চান?")}
                     <select
                       value={choice?.id || "whole"}
                       onChange={(e) =>
@@ -349,10 +310,10 @@ export function Market({
                       }
                     >
                       {options.map((o) => (
-                        <option key={o.id} value={o.id} disabled={!o.enabled}>
+                        <option key={o.id} value={o.id} disabled={false}>
                           {bn ? o.name_bn : o.name_en}
                           {!o.enabled
-                            ? t(" — not offered yet", " — এখনো চালু নয়")
+                            ? t(" — fee not set", " — ফি নির্ধারিত হয়নি")
                             : ""}{" "}
                           {o.enabled && Number(o.fee_bdt) > 0
                             ? "+ " + money(o.fee_bdt, bn)
@@ -362,19 +323,29 @@ export function Market({
                     </select>
                   </label>
                 )}
+                {choice && choice.id !== "whole" && (
+                  <p className="preparation-note">
+                    {t(
+                      "Neatly packed in transparent food-safe wrapping. Preparation fees are per ordered kg.",
+                      "স্বচ্ছ খাদ্য-নিরাপদ মোড়কে সুন্দরভাবে প্যাক করা হবে। প্রস্তুতির ফি অর্ডারের প্রতি কেজি অনুযায়ী।",
+                    )}
+                  </p>
+                )}
                 {detail && choice && (
                   <div className="preparation-note">
-                    {choice.image && (
-                      <img
-                        src={choice.image}
-                        alt={bn ? choice.name_bn : choice.name_en}
-                        width="180"
-                        height="120"
-                      />
-                    )}
+                    {choice.image &&
+                      !choice.image.startsWith("/preparation/") && (
+                        <img
+                          src={choice.image}
+                          alt={bn ? choice.name_bn : choice.name_en}
+                          width="180"
+                          height="120"
+                        />
+                      )}
                     <p>{choice.notes}</p>
                     <p>
-                      {t("Requested quantity", "অনুরোধের পরিমাণ")}:{" "}
+                      {t("Estimated prepared weight", "প্রস্তুতের পর আনুমানিক ওজন")}
+                      :{" "}
                       {(Number(
                         quantities[p.sku] || p.details.minimum_quantity || 1,
                       ) *
@@ -382,8 +353,8 @@ export function Market({
                         100}{" "}
                       {p.unit}.{" "}
                       {t(
-                        "Final prepared weight and any preparation charge will be confirmed with your quote.",
-                        "প্রস্তুতের পর ওজন এবং প্রস্তুতির খরচ চূড়ান্ত দামের সাথে নিশ্চিত করা হবে।",
+                        "Charged on ordered weight; final yield may vary.",
+                        "অর্ডারের ওজন অনুযায়ী মূল্য; প্রস্তুতের পর ওজন ভিন্ন হতে পারে।",
                       )}
                     </p>
                   </div>

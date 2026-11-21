@@ -26,13 +26,20 @@ def products(db: Session = Depends(get_db), q:str=Query(default="",max_length=16
     query=select(Product).where(Product.active.is_(True))
     if q:query=query.where(or_(Product.name_en.ilike("%"+q+"%"),Product.name_bn.ilike("%"+q+"%")))
     if department:query=query.where(Product.details['department'].as_string()==department)
-    return db.scalars(query.order_by(Product.price_bdt if sort=='price' else Product.name_en).limit(500)).all()
+    from app.modules.commerce.calculator import preparation_options
+    from app.modules.commerce.schemas import PilotSettings
+    from app.modules.commerce.service import get_setting
+    pilot = get_setting(db, "pilot", PilotSettings)
+    return [ProductOut.model_validate(p).model_copy(update={"details": {**p.details, "preparation_options": preparation_options(p, pilot)}}) for p in db.scalars(query.order_by(Product.price_bdt if sort=='price' else Product.name_en).limit(500)).all()]
 
 @router.get("/products/{sku}", response_model=ProductOut)
 def product_detail(sku:str,db:Session=Depends(get_db)):
     p=db.get(Product,sku)
     if p is None or not p.active:raise HTTPException(404,"Product not found")
-    return p
+    from app.modules.commerce.calculator import preparation_options
+    from app.modules.commerce.schemas import PilotSettings
+    from app.modules.commerce.service import get_setting
+    return ProductOut.model_validate(p).model_copy(update={"details": {**p.details, "preparation_options": preparation_options(p, get_setting(db, "pilot", PilotSettings))}})
 
 
 @router.post("/orders", response_model=OrderOut, status_code=201)

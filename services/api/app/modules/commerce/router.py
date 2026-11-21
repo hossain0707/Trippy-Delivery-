@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -67,7 +67,8 @@ def configuration(db: DB):
         issues.append("No payment method has been configured.")
     return {
         "setup_issues": issues,
-        "request_intake_open": True,
+        "request_intake_open": False,
+        "preview_checkout": c.app_env == "preview",
         "payments_collected": False,
         "ordering_open": c.app_env != "preview" and c.live_orders_enabled and c.pilot_approved,
         "payments": {"cod": {"enabled": payments.cod_enabled}, **result},
@@ -110,6 +111,9 @@ def save_cart(payload: Cart, db: DB, actor: Customer):
 
 @router.post("/review")
 def review(payload: Checkout, db: DB, actor: Customer):
+    if settings().app_env == "preview":
+        from app.modules.commerce.calculator import calculate
+        return calculate(payload, db)
     shipping, deadline, confirmed = delivery(db, payload.destination)
     payment_destination(db, payload.payment_method)
     subtotal = Decimal(0)
@@ -176,6 +180,17 @@ def review(payload: Checkout, db: DB, actor: Customer):
         "ordering_open": configuration(db)["ordering_open"],
         "message": "Slot and inventory are checked again when an order is submitted.",
     }
+
+
+@router.post("/preview-orders", status_code=201)
+def preview_checkout(payload: Checkout, db: DB, actor: Customer,
+                     idempotency_key: Annotated[str, Header(min_length=8, max_length=120)]):
+    if settings().app_env != "preview":
+        raise HTTPException(404, "Preview checkout is unavailable")
+    if payload.payment_reference:
+        raise HTTPException(422, "Payments are disabled")
+    from app.modules.commerce.calculator import save_preview
+    return save_preview(payload, db, actor, idempotency_key)
 
 
 @router.get("/orders/{order_id}")

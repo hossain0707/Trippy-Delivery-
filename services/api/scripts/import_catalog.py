@@ -24,6 +24,7 @@ def import_catalog(db, source=None):
             raise ValueError("Catalog seeds cannot invent approved stock or prices")
         db.add(Product(**item))
         added += 1
+    import_shopping_tariff(db)
     priced = import_market_prices(db)
     photos = import_real_photos(db)
     db.commit()
@@ -34,6 +35,30 @@ def import_catalog(db, source=None):
         "added": added,
         "total_source": len(document["products"]),
     }
+
+
+def import_shopping_tariff(db):
+    """Apply the owner's 21-Nov preparation tariff once; retain all later admin edits."""
+    from app.modules.commerce.models import ServiceSetting
+    marker = "shopping_tariff_2026_11_21"
+    if db.get(ServiceSetting, marker):
+        return
+    row = db.get(ServiceSetting, "pilot")
+    if row is None:
+        row = ServiceSetting(key="pilot", value={})
+        db.add(row)
+    value = dict(row.value or {})
+    value.setdefault("delivery_base_area", "Uttara")
+    value.setdefault("delivery_base_fee_bdt", "30.00")
+    value.setdefault("delivery_per_km_bdt", "5.00")
+    for key, amount in {
+        "preparation_cleaned_fee_bdt":"10.00",
+        "preparation_cut_only_fee_bdt":"15.00",
+        "preparation_cut_fee_bdt":"20.00",
+    }.items():
+        value.setdefault(key, amount)
+    row.value = value
+    db.add(ServiceSetting(key=marker, value={"source":"Owner instruction, 21 November 2026", "unit":"per ordered kg", "packaging":"Transparent food-safe wrapping included"}))
 
 
 def import_real_photos(db):
