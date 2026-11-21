@@ -166,9 +166,8 @@ export function CommerceConsole() {
       <p className="kicker">OWNER WORKSPACE</p>
       <h2>Catalog, payments & delivery controls</h2>
       <p>
-        Live customer ordering stays closed until inventory, payment receiving
-        details, coverage and pilot approval are complete. Saving these settings
-        does not activate the pilot.
+        No-payment requests are open for review. Confirm actual availability,
+        preparation charges and delivery before quoting. Payments remain disabled.
       </p>
       <nav className="department-pills" aria-label="Commerce administration">
         {[
