@@ -34,7 +34,13 @@ def preparation_options(product, pilot):
                 "notes": "",
             }
         ]
-    eligible = any(o["id"] in ("cleaned", "cut", "cut-only") for o in options)
+    raw = product.details.get("department") in (
+        "vegetables",
+        "fruit",
+        "fish",
+        "meat",
+    ) and product.sku not in ("EGGS", "BEEF-MINCE", "JACKFRUIT-PODS")
+    eligible = raw or any(o["id"] in ("cleaned", "cut", "cut-only") for o in options)
     # Existing enabled product-specific rates take precedence over the general tariff.
     for name, en, bn in [
         ("cleaned", "Cleaned", "পরিষ্কার"),
@@ -56,7 +62,6 @@ def preparation_options(product, pilot):
             )
     for o in options:
         if o.get("name_en") == "As sold":
-            raw = product.details.get("department") in ("vegetables", "fruit", "fish", "meat")
             o.update(
                 name_en="Whole / unprepared" if raw else "Original pack",
                 name_bn="আস্ত / অপ্রস্তুত" if raw else "মূল প্যাকেট",

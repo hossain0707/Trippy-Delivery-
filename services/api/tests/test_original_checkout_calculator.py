@@ -352,3 +352,30 @@ def test_catalog_labels_and_units_match_current_selling_unit(client, monkeypatch
         assert result["details"]["preparation_options"][0]["name_en"] == "Whole / unprepared"
     finally:
         settings.cache_clear()
+
+
+def test_raw_fruits_offer_tariff_but_packaged_foods_do_not(client, monkeypatch):
+    import importlib.util
+    from pathlib import Path
+
+    browser, factory = setup(client, monkeypatch)
+    path = Path(__file__).resolve().parents[1] / "scripts/import_catalog.py"
+    spec = importlib.util.spec_from_file_location("raw_fruit_catalog", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    try:
+        with factory() as db:
+            module.import_catalog(db)
+        fruit = browser.get("/api/v1/groceries/products/APPLE").json()
+        choices = {o["id"]: o for o in fruit["details"]["preparation_options"]}
+        assert set(choices) == {"whole", "cleaned", "cut-only", "cut"}
+        assert choices["cleaned"]["enabled"]
+        assert choices["cleaned"]["fee_unit"] == "kg"
+        for sku in ("MILK", "EGGS", "BEEF-MINCE", "BREAD"):
+            options = browser.get("/api/v1/groceries/products/" + sku).json()["details"][
+                "preparation_options"
+            ]
+            assert [o["id"] for o in options] == ["whole"]
+            assert options[0]["name_en"] == "Original pack"
+    finally:
+        settings.cache_clear()
