@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { searchScore } from "@/lib/search.mjs";
-import { preparationOptions } from "@/lib/preparation.mjs";
+import { productPhoto, preparationOptions } from "@/lib/preparation.mjs";
 import { useEffect, useState } from "react";
 import {
   commerceApi,
@@ -31,6 +31,7 @@ export function Market({
   const [selected, setSelected] = useState("");
   const [prep, setPrep] = useState<Record<string, string>>({});
   const [quantities, setQuantities] = useState<Record<string, string>>({});
+  const [failedPhotos, setFailedPhotos] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
   const [drawer, setDrawer] = useState(false);
   const [basket, setBasket] = useState<BasketLine[]>([]);
@@ -212,18 +213,35 @@ export function Market({
           const choice = options.find(
             (o) => o.id === (prep[p.sku] || options.find((o) => o.enabled)?.id),
           );
+          const photo = productPhoto(p, choice, failedPhotos);
           const priced = p.price_approved && Number(p.price_bdt) > 0;
           const available = priced && Number(p.stock_qty) > 0;
           return (
-            <article key={p.sku} className="market-product">
+            <article
+              key={p.sku}
+              className={
+                detail ? "market-product" : "market-product compact-product"
+              }
+            >
               <Link
                 className="product-photo"
                 href={"/product?sku=" + encodeURIComponent(p.sku)}
               >
-                {p.details.image ? (
+                {photo.src ? (
                   <img
-                    src={p.details.image}
-                    alt={bn ? p.name_bn : p.name_en}
+                    src={photo.src}
+                    alt={
+                      (bn ? p.name_bn : p.name_en) +
+                      " · " +
+                      (photo.prepared && choice
+                        ? bn
+                          ? choice.name_bn
+                          : choice.name_en
+                        : t("Whole item", "আস্ত পণ্য"))
+                    }
+                    onError={() =>
+                      setFailedPhotos((previous) => [...previous, photo.src])
+                    }
                     loading="lazy"
                     width="400"
                     height="320"
@@ -233,52 +251,68 @@ export function Market({
                   <span className="season-tag">{t("Seasonal", "মৌসুমি")}</span>
                 )}
               </Link>
-              {p.details.photo_credit && (
-                <small className="photo-credit">
-                  <a
-                    href={p.details.photo_credit.source_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {p.details.photo_credit.creator} ·{" "}
-                    {p.details.photo_credit.license}
-                  </a>
-                </small>
-              )}
               <div className="product-content">
-                <p className="product-department">
-                  {names[p.details.department || "pantry"]?.[bn ? 1 : 0]}
-                </p>
+                {detail && (
+                  <p className="product-department">
+                    {names[p.details.department || "pantry"]?.[bn ? 1 : 0]}
+                  </p>
+                )}
                 <h3>
                   <Link href={"/product?sku=" + encodeURIComponent(p.sku)}>
                     {bn ? p.name_bn : p.name_en}
                   </Link>
                 </h3>
-                <p className="product-subtitle">
-                  {bn ? p.name_en : p.name_bn} · {p.unit}
-                </p>
-                <p>
-                  {bn ? p.details.description_bn : p.details.description_en}
-                </p>
+                {!detail && (
+                  <Link
+                    className="product-details-link"
+                    href={"/product?sku=" + encodeURIComponent(p.sku)}
+                  >
+                    {t("View details →", "বিস্তারিত →")}
+                  </Link>
+                )}
+                {detail && (
+                  <>
+                    <p className="product-subtitle">
+                      {bn ? p.name_en : p.name_bn} · {p.unit}
+                    </p>
+                    <p>
+                      {bn ? p.details.description_bn : p.details.description_en}
+                    </p>
+                    {p.details.photo_credit && (
+                      <small className="photo-credit">
+                        <a
+                          href={p.details.photo_credit.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {p.details.photo_credit.creator} ·{" "}
+                          {p.details.photo_credit.license}
+                        </a>
+                      </small>
+                    )}
+                  </>
+                )}
                 <p className="price-line">
                   {p.price_approved
                     ? money(p.price_bdt, bn)
                     : t("Ask for today’s price", "আজকের দাম জানতে চান")}{" "}
                   <span>{p.price_approved ? "/ " + p.unit : ""}</span>
                 </p>
-                <p className={available ? "stock-ready" : "stock-pending"}>
-                  {available
-                    ? t("Available to reserve", "অর্ডারের জন্য উপলব্ধ")
-                    : t(
-                        priced
-                          ? "Add to your basket; stock confirmation required"
-                          : "Price being checked",
-                        priced
-                          ? "ঝুড়িতে রাখুন; মজুত নিশ্চিত করা প্রয়োজন"
-                          : "দাম যাচাই করা হচ্ছে",
-                      )}
-                </p>
-                {p.details.market_price && (
+                {detail && (
+                  <p className={available ? "stock-ready" : "stock-pending"}>
+                    {available
+                      ? t("Available to reserve", "অর্ডারের জন্য উপলব্ধ")
+                      : t(
+                          priced
+                            ? "Add to your basket; stock confirmation required"
+                            : "Price being checked",
+                          priced
+                            ? "ঝুড়িতে রাখুন; মজুত নিশ্চিত করা প্রয়োজন"
+                            : "দাম যাচাই করা হচ্ছে",
+                        )}
+                  </p>
+                )}
+                {detail && p.details.market_price && (
                   <details className="market-price-source">
                     <summary>
                       {t("Market-based price", "বাজারভিত্তিক দাম")} ·{" "}
@@ -300,7 +334,20 @@ export function Market({
                     </a>
                   </details>
                 )}
-                {options.length > 0 && (
+                {photo.missingPreparation && (
+                  <small className="preparation-photo-status">
+                    {t(
+                      "Whole-item photo · preparation photo pending",
+                      "আস্ত পণ্যের ছবি · প্রস্তুত ছবির অপেক্ষায়",
+                    )}
+                  </small>
+                )}
+                {!photo.src && (
+                  <small className="preparation-photo-status">
+                    {t("Product photo pending", "পণ্যের ছবির অপেক্ষায়")}
+                  </small>
+                )}
+                {options.length > 1 && (
                   <label>
                     {t("How would you like it?", "কীভাবে নিতে চান?")}
                     <select
@@ -325,7 +372,7 @@ export function Market({
                     </select>
                   </label>
                 )}
-                {choice && choice.id !== "whole" && (
+                {detail && choice && choice.id !== "whole" && (
                   <p className="preparation-note">
                     {t(
                       "Neatly packed in transparent food-safe wrapping. Preparation fees are per ordered kg.",
@@ -335,15 +382,6 @@ export function Market({
                 )}
                 {detail && choice && (
                   <div className="preparation-note">
-                    {choice.image &&
-                      !choice.image.startsWith("/preparation/") && (
-                        <img
-                          src={choice.image}
-                          alt={bn ? choice.name_bn : choice.name_en}
-                          width="180"
-                          height="120"
-                        />
-                      )}
                     <p>{choice.notes}</p>
                     <p>
                       {t("Estimated prepared weight", "প্রস্তুতের পর আনুমানিক ওজন")}
@@ -362,24 +400,86 @@ export function Market({
                   </div>
                 )}
                 <div className="product-buy">
-                  <label>
-                    {t("Quantity", "পরিমাণ")}
-                    <input
-                      type="number"
-                      min={p.details.minimum_quantity || 1}
-                      step={p.details.quantity_step || 1}
-                      max="50"
-                      value={
-                        quantities[p.sku] || p.details.minimum_quantity || "1"
-                      }
-                      onChange={(e) =>
-                        setQuantities({
-                          ...quantities,
-                          [p.sku]: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
+                  <div className="quantity-field">
+                    <span>{t("Quantity", "পরিমাণ")}</span>
+                    <div className="quantity-controls">
+                      <button
+                        type="button"
+                        aria-label={
+                          t("Decrease quantity for ", "পরিমাণ কমান: ") +
+                          (bn ? p.name_bn : p.name_en)
+                        }
+                        onClick={() =>
+                          setQuantities({
+                            ...quantities,
+                            [p.sku]: String(
+                              Math.max(
+                                Number(p.details.minimum_quantity || 1),
+                                Math.round(
+                                  (Number(
+                                    quantities[p.sku] ||
+                                      p.details.minimum_quantity ||
+                                      1,
+                                  ) -
+                                    Number(p.details.quantity_step || 1)) *
+                                    1000,
+                                ) / 1000,
+                              ),
+                            ),
+                          })
+                        }
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        aria-label={
+                          t("Quantity for ", "পরিমাণ: ") +
+                          (bn ? p.name_bn : p.name_en)
+                        }
+                        min={p.details.minimum_quantity || 1}
+                        step={p.details.quantity_step || 1}
+                        max="50"
+                        value={
+                          quantities[p.sku] || p.details.minimum_quantity || "1"
+                        }
+                        onChange={(e) =>
+                          setQuantities({
+                            ...quantities,
+                            [p.sku]: e.target.value,
+                          })
+                        }
+                      />
+                      <button
+                        type="button"
+                        aria-label={
+                          t("Increase quantity for ", "পরিমাণ বাড়ান: ") +
+                          (bn ? p.name_bn : p.name_en)
+                        }
+                        onClick={() =>
+                          setQuantities({
+                            ...quantities,
+                            [p.sku]: String(
+                              Math.min(
+                                50,
+                                Math.round(
+                                  (Number(
+                                    quantities[p.sku] ||
+                                      p.details.minimum_quantity ||
+                                      1,
+                                  ) +
+                                    Number(p.details.quantity_step || 1)) *
+                                    1000,
+                                ) / 1000,
+                              ),
+                            ),
+                          })
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                   <button
                     className="primary"
                     disabled={
