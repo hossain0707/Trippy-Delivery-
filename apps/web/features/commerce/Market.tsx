@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ProductImage } from "./ProductImage";
 import { API_BASE } from "@/lib/api";
 import { searchScore } from "@/lib/search.mjs";
 import { productPhoto, preparationOptions } from "@/lib/preparation.mjs";
@@ -231,26 +232,24 @@ export function Market({
                 className="product-photo"
                 href={"/product?sku=" + encodeURIComponent(p.sku)}
               >
-                {photo.src ? (
-                  <img
-                    src={photo.src}
-                    alt={
-                      (bn ? p.name_bn : p.name_en) +
-                      " · " +
-                      (photo.prepared && choice
-                        ? bn
-                          ? choice.name_bn
-                          : choice.name_en
-                        : t("Whole item", "আস্ত পণ্য"))
-                    }
-                    onError={() =>
-                      setFailedPhotos((previous) => [...previous, photo.src])
-                    }
-                    loading="lazy"
-                    width="400"
-                    height="320"
-                  />
-                ) : null}
+                <ProductImage
+                  photo={photo}
+                  alt={
+                    (bn ? p.name_bn : p.name_en) +
+                    " · " +
+                    (photo.prepared && choice
+                      ? bn
+                        ? choice.name_bn
+                        : choice.name_en
+                      : t("Whole item", "আস্ত পণ্য")) +
+                    (photo.generated
+                      ? t(" · AI-generated preview", " · এআই-তৈরি নমুনা")
+                      : "")
+                  }
+                  onError={() =>
+                    setFailedPhotos((previous) => [...previous, photo.src])
+                  }
+                />
                 {p.details.seasonal && (
                   <span className="season-tag">{t("Seasonal", "মৌসুমি")}</span>
                 )}
@@ -282,18 +281,20 @@ export function Market({
                     <p>
                       {bn ? p.details.description_bn : p.details.description_en}
                     </p>
-                    {!uploadedCredit && p.details.photo_credit && (
-                      <small className="photo-credit">
-                        <a
-                          href={p.details.photo_credit.source_url}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {p.details.photo_credit.creator} ·{" "}
-                          {p.details.photo_credit.license}
-                        </a>
-                      </small>
-                    )}
+                    {!photo.generated &&
+                      !uploadedCredit &&
+                      p.details.photo_credit && (
+                        <small className="photo-credit">
+                          <a
+                            href={p.details.photo_credit.source_url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {p.details.photo_credit.creator} ·{" "}
+                            {p.details.photo_credit.license}
+                          </a>
+                        </small>
+                      )}
                     {uploadedCredit && (
                       <small className="photo-credit">
                         {uploadedCredit.credit}
@@ -355,6 +356,14 @@ export function Market({
                       {t("View price source", "দামের উৎস দেখুন")}
                     </a>
                   </details>
+                )}
+                {photo.generated && (
+                  <small className="preparation-photo-status ai-preview-label">
+                    {t(
+                      "AI-generated preview · presentation may vary",
+                      "এআই-তৈরি নমুনা · পরিবেশন ভিন্ন হতে পারে",
+                    )}
+                  </small>
                 )}
                 {photo.missingPreparation && (
                   <small className="preparation-photo-status">

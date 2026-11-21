@@ -24,13 +24,20 @@ export default function Page() {
   return (
     <main className="wrap commerce-page">
       <Link href="/groceries">Back to groceries</Link>
-      <h1>Real product photographs</h1>
+      <h1>Product images and photo credits</h1>
       <p>
-        These are representative photographs of real ingredients and products,
-        not photographs of TRIPPY stock or a guarantee of a particular brand,
-        size or variety. Product details and the final quote determine your
-        order. Individual photographs retain their stated licenses; resized WebP
-        versions carry the same image license.
+        Images labeled “AI-generated preview” are illustrative product and
+        packaging previews created for TRIPPY. They are not photographs of
+        actual stock. Preparation, pack size and presentation may vary.
+        Owner-uploaded photographs replace these previews where supplied.
+      </p>
+      <p>
+        The licensed photographs listed below are representative photographs of
+        real ingredients and products, not photographs of TRIPPY stock or a
+        guarantee of a particular brand, size or variety. Product details and
+        the final quote determine your order. Individual photographs retain
+        their stated licenses; resized WebP versions carry the same image
+        license.
       </p>
       <p role="status">{error}</p>
       {Object.entries(credits).map(([sku, c]) => (
