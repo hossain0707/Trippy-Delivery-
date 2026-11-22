@@ -80,6 +80,7 @@ type Order = {
 };
 type Courier = {
   id: string;
+  name?: string;
   actor_id: string;
   status: string;
   transport_mode: string;
@@ -101,12 +102,12 @@ const emptyDestination: Destination = {
   routing: "",
   instructions: "",
 };
-export function CommerceConsole() {
+export function CommerceConsole({ section }: { section?: string }) {
   const token = useCredential();
   const [photoRights, setPhotoRights] = useState(false);
   const [photoCredit, setPhotoCredit] = useState("TRIPPY Delivery");
   const [photoSource, setPhotoSource] = useState("");
-  const [tab, setTab] = useState("catalog");
+  const [tab, setTab] = useState(section || "catalog");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -145,14 +146,14 @@ export function CommerceConsole() {
       setPilot(await commerceApi("/admin/commerce/settings/pilot", token));
     if (tab === "orders") {
       setOrders(await commerceApi("/admin/orders", token));
-      setCouriers(await commerceApi("/admin/couriers", token));
+      setCouriers(await commerceApi("/admin/workspace/couriers", token));
     }
     if (tab === "parcels") {
       setParcels(await commerceApi("/admin/parcels", token));
-      setCouriers(await commerceApi("/admin/couriers", token));
+      setCouriers(await commerceApi("/admin/workspace/couriers", token));
     }
     if (tab === "couriers")
-      setCouriers(await commerceApi("/admin/couriers", token));
+      setCouriers(await commerceApi("/admin/workspace/couriers", token));
     if (tab === "customers" || tab === "events")
       setRecords(await commerceApi("/admin/commerce/" + tab, token));
   }, [tab, token]);
@@ -221,37 +222,45 @@ export function CommerceConsole() {
     chosen &&
     setChosen({ ...chosen, details: { ...chosen.details, [field]: value } });
   return (
-    <section className="panel commerce-admin">
-      <p className="kicker">OWNER WORKSPACE</p>
-      <h2>Catalog, payments & delivery controls</h2>
-      <p>
-        COD orders can be reviewed and fulfilled here. Online ordering requires
-        inventory, payment receiving details, coverage and pilot approval are
-        complete. Saving these settings does not activate the pilot.
-      </p>
-      <nav className="department-pills" aria-label="Commerce administration">
-        {[
-          ["catalog", "Product content"],
-          ["payments", "Payment methods"],
-          ["pilot", "Delivery zones & support"],
-          ["orders", "Order fulfillment"],
-          ["parcels", "Parcel operations"],
-          ["couriers", "Partner review"],
-          ["customers", "Customers"],
-          ["events", "Audit trail"],
-        ].map(([id, name]) => (
-          <button
-            key={id}
-            aria-pressed={tab === id}
-            onClick={() => {
-              setTab(id);
-              setChosen(null);
-            }}
+    <section className={"panel commerce-admin aw-console-" + tab}>
+      {!section && (
+        <>
+          <p className="kicker">OWNER WORKSPACE</p>
+          <h2>Catalog, payments & delivery controls</h2>
+          <p>
+            COD orders can be reviewed and fulfilled here. Online ordering
+            requires inventory, payment receiving details, coverage and pilot
+            approval are complete. Saving these settings does not activate the
+            pilot.
+          </p>
+          <nav
+            className="department-pills"
+            aria-label="Commerce administration"
           >
-            {name}
-          </button>
-        ))}
-      </nav>
+            {[
+              ["catalog", "Product content"],
+              ["payments", "Payment methods"],
+              ["pilot", "Delivery zones & support"],
+              ["orders", "Order fulfillment"],
+              ["parcels", "Parcel operations"],
+              ["couriers", "Partner review"],
+              ["customers", "Customers"],
+              ["events", "Audit trail"],
+            ].map(([id, name]) => (
+              <button
+                key={id}
+                aria-pressed={tab === id}
+                onClick={() => {
+                  setTab(id);
+                  setChosen(null);
+                }}
+              >
+                {name}
+              </button>
+            ))}
+          </nav>
+        </>
+      )}
       <p role="status">{status || (busy ? "Loading…" : "")}</p>
       {tab === "catalog" && (
         <>
@@ -648,74 +657,83 @@ export function CommerceConsole() {
                 setPayments({ ...payments, cod_enabled: e.target.checked })
               }
             />{" "}
-            Offer Cash on Delivery after pilot activation
+            Cash on delivery — accept new orders
           </label>
           {(["bkash", "nagad", "rocket", "bank"] as const).map((method) => {
             const d = payments[method];
             const update = (key: string, value: unknown) =>
               setPayments({ ...payments, [method]: { ...d, [key]: value } });
             return (
-              <fieldset key={method}>
-                <legend>{method === "bank" ? "Bank Transfer" : method}</legend>
-                <p>
-                  Receiving details must be genuine and independently verified.
-                  Never use demonstration numbers for real transfers.
-                </p>
-                <div className="fields">
-                  {(method === "bank"
-                    ? [
-                        "bank_name",
-                        "account_name",
-                        "account_number",
-                        "branch",
-                        "routing",
-                      ]
-                    : ["receiving_number"]
-                  ).map((k) => (
-                    <label key={k}>
-                      {
+              <details className="aw-payment-provider" key={method}>
+                <summary>
+                  {method === "bank" ? "Bank Transfer" : method} ·{" "}
+                  {d.enabled ? "Configured" : "Not enabled"}
+                </summary>
+                <fieldset>
+                  <legend>
+                    {method === "bank" ? "Bank Transfer" : method}
+                  </legend>
+                  <p>
+                    Receiving details must be genuine and independently
+                    verified. Never use demonstration numbers for real
+                    transfers.
+                  </p>
+                  <div className="fields">
+                    {(method === "bank"
+                      ? [
+                          "bank_name",
+                          "account_name",
+                          "account_number",
+                          "branch",
+                          "routing",
+                        ]
+                      : ["receiving_number"]
+                    ).map((k) => (
+                      <label key={k}>
                         {
-                          receiving_number: "Receiving number",
-                          bank_name: "Bank name",
-                          account_name: "Account holder",
-                          account_number: "Account number",
-                          branch: "Branch",
-                          routing: "Routing number",
-                        }[k]
-                      }
-                      <input
-                        maxLength={120}
-                        value={String(d[k as keyof Destination] || "")}
-                        onChange={(e) => update(k, e.target.value)}
-                      />
-                    </label>
-                  ))}
-                </div>
-                <label>
-                  Payment instructions
-                  <textarea
-                    maxLength={1000}
-                    value={d.instructions}
-                    onChange={(e) => update("instructions", e.target.value)}
-                  />
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={d.verified}
-                    onChange={(e) => update("verified", e.target.checked)}
-                  />{" "}
-                  Receiving details verified by owner
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={d.enabled}
-                    onChange={(e) => update("enabled", e.target.checked)}
-                  />{" "}
-                  Enable this method after pilot activation
-                </label>
-              </fieldset>
+                          {
+                            receiving_number: "Receiving number",
+                            bank_name: "Bank name",
+                            account_name: "Account holder",
+                            account_number: "Account number",
+                            branch: "Branch",
+                            routing: "Routing number",
+                          }[k]
+                        }
+                        <input
+                          maxLength={120}
+                          value={String(d[k as keyof Destination] || "")}
+                          onChange={(e) => update(k, e.target.value)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <label>
+                    Payment instructions
+                    <textarea
+                      maxLength={1000}
+                      value={d.instructions}
+                      onChange={(e) => update("instructions", e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={d.verified}
+                      onChange={(e) => update("verified", e.target.checked)}
+                    />{" "}
+                    Receiving details verified by owner
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={d.enabled}
+                      onChange={(e) => update("enabled", e.target.checked)}
+                    />{" "}
+                    Enable this method after pilot activation
+                  </label>
+                </fieldset>
+              </details>
             );
           })}
           <button className="primary" disabled={busy}>
@@ -1306,7 +1324,7 @@ export function CommerceConsole() {
                 });
               }}
             >
-              <h3>{c.id}</h3>
+              <h3>{c.name || "Delivery partner"}</h3>
               <p>
                 {c.transport_mode} · {c.status}
               </p>

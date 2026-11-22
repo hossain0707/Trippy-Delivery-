@@ -11,6 +11,7 @@ from app.core.observability import RequestAuditMiddleware, configure_logs
 from app.modules.groceries.router import router as groceries
 from app.modules.parcels.router import router as parcels
 from app.modules.operations.router import router as operations
+from app.modules.operations.workspace import router as workspace
 from app.modules.commerce.router import router as commerce, admin as commerce_admin
 from app.modules.commerce.requests import router as order_requests
 from app.modules.commerce.media import router as product_media
@@ -102,6 +103,7 @@ app.include_router(commerce, prefix="/api/v1")
 app.include_router(commerce_admin, prefix="/api/v1")
 app.include_router(parcels, prefix="/api/v1")
 app.include_router(groceries, prefix="/api/v1")
+app.include_router(workspace, prefix="/api/v1")
 app.include_router(operations, prefix="/api/v1")
 
 
