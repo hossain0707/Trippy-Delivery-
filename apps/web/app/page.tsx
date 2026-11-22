@@ -32,6 +32,6 @@ export default function Home() {
         <a href="/groceries"><p className="kicker">{t("TRIPPY GROCERIES", "ট্রিপি বাজার")}</p><h2>{t("Fresh market and kitchen essentials", "তাজা বাজার ও রান্নাঘরের প্রয়োজনীয় পণ্য")}</h2><span>{t("Explore the grocery shop", "বাজার দেখুন")} →</span></a>
       </div>
     </main>
-    <footer className="site-footer"><div className="wrap"><strong>TRIPPY Delivery</strong> <Link href="/photo-credits">{t("Photo credits", "ছবির কৃতিত্ব")}</Link><p>{t("Preview · Customer orders and payments are disabled.", "প্রিভিউ · গ্রাহকের অর্ডার ও পেমেন্ট বন্ধ আছে।")}</p></div></footer>
+    <footer className="site-footer"><div className="wrap"><strong>TRIPPY Delivery</strong> <Link href="/photo-credits">{t("Photo credits", "ছবির কৃতিত্ব")}</Link><p>{t("Cash on delivery · Online payments are disabled.", "ক্যাশ অন ডেলিভারি · অনলাইন পেমেন্ট বন্ধ আছে।")}</p></div></footer>
   </div>;
 }

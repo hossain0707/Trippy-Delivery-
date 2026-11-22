@@ -184,8 +184,11 @@ function CheckoutForm({
       city: form.city,
       postal_code: form.postal_code,
     },
-    items: lines,
-    payment_method: form.payment_method,
+    items: lines.map((line) => ({
+      ...line,
+      preparation_weight_kg: line.preparation_weight_kg || undefined,
+    })),
+    payment_method: "cod",
     payment_reference: "",
     instructions: form.instructions,
     preparation_notes: form.preparation_notes,
@@ -231,18 +234,16 @@ function CheckoutForm({
         className="panel checkout-delivery checkout-success"
         role="status"
       >
-        <p className="kicker">
-          {t("PREVIEW ORDER SAVED", "প্রিভিউ অর্ডার সংরক্ষিত")}
-        </p>
+        <p className="kicker">{t("ORDER PLACED", "অর্ডার দেওয়া হয়েছে")}</p>
         <h2>{order.order_number}</h2>
         <p>
           {t(
-            "No payment was taken and no delivery has been scheduled.",
-            "কোনো টাকা নেওয়া বা ডেলিভারি নির্ধারণ করা হয়নি।",
+            "Your cash-on-delivery order has reached the admin. Track it for confirmation or a final-price request. Pay the courier when delivered.",
+            "ক্যাশ অন ডেলিভারি অর্ডার অ্যাডমিন পেয়েছেন। নিশ্চিতকরণ বা চূড়ান্ত দাম দেখতে অর্ডার ট্র্যাক করুন। পণ্য পেলে টাকা দিন।",
           )}
         </p>
         <Link href={"/orders?id=" + order.id}>
-          {t("View saved order", "সংরক্ষিত অর্ডার দেখুন")}
+          {t("Track my order", "অর্ডার ট্র্যাক করুন")}
         </Link>
       </section>
     );
@@ -398,8 +399,8 @@ function CheckoutForm({
                 />
                 <small>
                   {t(
-                    "Enter the distance for this preview; automatic road routing is not enabled.",
-                    "প্রিভিউ হিসাবের দূরত্ব লিখুন; স্বয়ংক্রিয় সড়ক দূরত্ব চালু নয়।",
+                    "Enter the distance estimate; the store will verify it before confirming the order.",
+                    "আনুমানিক দূরত্ব লিখুন; নিশ্চিত করার আগে দোকান যাচাই করবে।",
                   )}
                 </small>
               </label>
@@ -465,8 +466,8 @@ function CheckoutForm({
               </label>
               <small>
                 {t(
-                  "Saved as a preference only. No payment PIN, password or OTP is stored.",
-                  "শুধু পছন্দ সংরক্ষণ করা হয়। পেমেন্ট পিন, পাসওয়ার্ড বা ওটিপি সংরক্ষণ হয় না।",
+                  "This order uses cash on delivery. Online methods are saved preferences only and cannot collect payment yet.",
+                  "এই অর্ডার ক্যাশ অন ডেলিভারি। অনলাইন পদ্ধতি শুধু পছন্দ হিসেবে সংরক্ষিত, এখন টাকা নেওয়া হয় না।",
                 )}
               </small>
             </details>
@@ -591,7 +592,7 @@ function CheckoutForm({
                   item.message.includes("weight") ||
                   item.message.includes("ওজন"),
               )
-                ? t("Weight needed", "ওজন প্রয়োজন")
+                ? t("Store will weigh", "দোকান ওজন করবে")
                 : money(
                     review?.preparation_fee_bdt ||
                       Math.max(0, subtotal - itemSubtotal),
@@ -614,7 +615,7 @@ function CheckoutForm({
             </div>
           )}
         </dl>
-        {!!pendingItems.length && (
+        {!review && !!pendingItems.length && (
           <div className="checkout-warning">
             {pendingItems.map((item) => (
               <p key={item.sku}>
@@ -624,7 +625,7 @@ function CheckoutForm({
                   className="text-button"
                   onClick={() => onFix(item.sku)}
                 >
-                  {t("Fix item", "পণ্যটি ঠিক করুন")}
+                  {t("View item", "পণ্য দেখুন")}
                 </button>
               </p>
             ))}
@@ -633,7 +634,12 @@ function CheckoutForm({
         {!!review?.pending?.length && (
           <ul className="checkout-warning" role="status">
             {review.pending.map((p) => (
-              <li key={p}>{p}</li>
+              <li key={p}>
+                {p.replace(
+                  ": enter preparation weight in kg",
+                  ": store will weigh and confirm preparation fee",
+                )}
+              </li>
             ))}
           </ul>
         )}
@@ -642,10 +648,13 @@ function CheckoutForm({
           <strong>
             {review?.total_bdt != null
               ? money(review.total_bdt, bn)
-              : t("Pending review", "পর্যালোচনা বাকি")}
+              : t(
+                  review ? "Final quote after weighing" : "Review to calculate",
+                  review ? "ওজনের পরে চূড়ান্ত দাম" : "হিসাবের জন্য পর্যালোচনা করুন",
+                )}
           </strong>
         </div>
-        {!review || review.total_bdt === null ? (
+        {!review ? (
           <button
             className="primary"
             type="submit"
@@ -655,14 +664,14 @@ function CheckoutForm({
           >
             {busy
               ? t("Checking…", "যাচাই হচ্ছে…")
-              : t("Review preview order →", "প্রিভিউ অর্ডার পর্যালোচনা →")}
+              : t("Review order →", "অর্ডার পর্যালোচনা →")}
           </button>
         ) : (
           <button
             className="primary"
-            disabled={busy || !configuration?.preview_checkout}
+            disabled={busy || !configuration?.cod_ordering_open}
             onClick={async () => {
-              if (!review || !configuration?.preview_checkout || busy) return;
+              if (!review || !configuration?.cod_ordering_open || busy) return;
               setBusy(true);
               setStatus("");
               try {
@@ -671,7 +680,7 @@ function CheckoutForm({
                   order_number: string;
                   payment_status: string;
                 }>(
-                  "/commerce/preview-orders",
+                  "/commerce/cod-orders",
                   token,
                   "POST",
                   {
@@ -691,7 +700,7 @@ function CheckoutForm({
                 } catch {
                   setStatus(
                     t(
-                      "Preview order saved; the account basket could not be cleared.",
+                      "Order placed; the account basket could not be cleared.",
                       "অর্ডার সংরক্ষিত; অ্যাকাউন্টের ঝুড়ি খালি করা যায়নি।",
                     ),
                   );
@@ -705,24 +714,36 @@ function CheckoutForm({
           >
             {busy
               ? t("Saving…", "সংরক্ষণ হচ্ছে…")
-              : t("Save preview order", "প্রিভিউ অর্ডার সংরক্ষণ")}
+              : t("Place cash-on-delivery order", "ক্যাশ অন ডেলিভারি অর্ডার দিন")}
           </button>
+        )}
+        {configuration && !configuration.cod_ordering_open && (
+          <p role="status">
+            {t(
+              "The store has paused new cash-on-delivery orders. Please contact support.",
+              "দোকান নতুন ক্যাশ অন ডেলিভারি অর্ডার সাময়িক বন্ধ রেখেছে। সহায়তায় যোগাযোগ করুন।",
+            )}
+          </p>
         )}
         <p role="status" className="checkout-status">
           {status}
         </p>
         <div className="checkout-payment-notice">
-          <strong>{t("Payments are not enabled", "পেমেন্ট চালু নেই")}</strong>
+          <strong>{t("Cash on delivery", "ক্যাশ অন ডেলিভারি")}</strong>
           <p>
             {t(
-              "Preview only. No payment will be taken and no delivery will be scheduled.",
-              "শুধু প্রিভিউ। কোনো টাকা নেওয়া বা ডেলিভারি নির্ধারণ করা হবে না।",
+              "Pay the courier upon delivery. If weighing or pricing is needed, the store sends a final quote for your approval before preparation. Online payments are disabled.",
+              "ডেলিভারির সময় টাকা দিন। ওজন বা দাম বাকি থাকলে প্রস্তুতির আগে দোকানের চূড়ান্ত দাম অনুমোদন করুন। অনলাইন পেমেন্ট বন্ধ।",
             )}
           </p>
         </div>
         {review && (
           <p className="checkout-window">
-            {t("Example window (not scheduled)", "উদাহরণ সময় (নির্ধারিত নয়)")}:{" "}
+            {t(
+              "Proposed window (awaiting confirmation)",
+              "প্রস্তাবিত সময় (নিশ্চিতকরণ বাকি)",
+            )}
+            :{" "}
             {new Date(review.delivery_deadline).toLocaleString(
               bn ? "bn-BD" : "en-BD",
               { timeZone: "Asia/Dhaka" },
@@ -800,7 +821,10 @@ export function BasketCheckout() {
               sku: l.sku,
               message:
                 name +
-                t(": add total preparation weight", ": প্রস্তুতির মোট ওজন দিন"),
+                t(
+                  ": store will confirm preparation weight and fee",
+                  ": দোকান প্রস্তুতির ওজন ও ফি নিশ্চিত করবে",
+                ),
             },
           ]
         : [];
@@ -833,8 +857,8 @@ export function BasketCheckout() {
       </nav>
       <p className="launch-notice checkout-preview-banner">
         {t(
-          "Preview only · No payments or real deliveries",
-          "শুধু প্রিভিউ · পেমেন্ট ও প্রকৃত ডেলিভারি বন্ধ",
+          "Cash on delivery · Pay when your order arrives",
+          "ক্যাশ অন ডেলিভারি · পণ্য পেলে টাকা দিন",
         )}
       </p>
       <header className="checkout-heading" id="checkout-heading">
@@ -963,8 +987,8 @@ export function BasketCheckout() {
                   {p && p.unit !== "kg" && choice?.fee_unit === "kg" && (
                     <label className="preparation-weight">
                       {t(
-                        "Total preparation weight (kg)",
-                        "প্রস্তুতির মোট ওজন (কেজি)",
+                        "Preparation weight, if known (kg, optional)",
+                        "প্রস্তুতির ওজন জানা থাকলে (কেজি, ঐচ্ছিক)",
                       )}
                       <input
                         disabled={busy}
@@ -1144,8 +1168,8 @@ export function BasketCheckout() {
           </p>
           <p>
             {t(
-              "Payments and real fulfillment are disabled.",
-              "পেমেন্ট ও প্রকৃত ডেলিভারি বন্ধ আছে।",
+              "Cash on delivery is available when enabled by the store. Online payments are disabled.",
+              "দোকান চালু রাখলে ক্যাশ অন ডেলিভারি করা যাবে। অনলাইন পেমেন্ট বন্ধ।",
             )}
           </p>
         </aside>

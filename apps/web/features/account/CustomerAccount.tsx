@@ -205,8 +205,8 @@ export function CustomerAccount() {
       </Link>
       <h1>My TRIPPY</h1>
       <p>
-        Save your details once for future checkouts. Preview only: payments and
-        real fulfillment are disabled.
+        Save your details once for future checkouts. Cash-on-delivery orders appear
+        here for tracking. Online payments are disabled.
       </p>
       <GoogleAccess>
         <Records />

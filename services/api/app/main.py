@@ -14,6 +14,7 @@ from app.modules.operations.router import router as operations
 from app.modules.commerce.router import router as commerce, admin as commerce_admin
 from app.modules.commerce.requests import router as order_requests
 from app.modules.commerce.media import router as product_media
+from app.modules.commerce.cod import router as cod_orders
 
 configure_logs()
 config = settings()
@@ -26,7 +27,7 @@ app = FastAPI(
 
 @app.middleware("http")
 async def preview_write_guard(request: Request, call_next):
-    # Explicit hosted-preview mode: accept calculation requests but never mutate data.
+    # Hosted preview permits explicitly enabled COD workflows; online payment stays closed.
     if config.app_env == "preview" and request.method not in ("GET", "HEAD", "OPTIONS"):
         path = request.url.path
         allowed = (
@@ -37,6 +38,7 @@ async def preview_write_guard(request: Request, call_next):
                 "/api/v1/parcels/requests",
                 "/api/v1/commerce/review",
                 "/api/v1/commerce/preview-orders",
+                "/api/v1/commerce/cod-orders",
                 "/api/v1/commerce/order-requests",
                 "/api/v1/commerce/order-requests/review",
                 "/api/v1/commerce/courier/application",
@@ -61,6 +63,13 @@ async def preview_write_guard(request: Request, call_next):
             request.method == "POST"
             and path.startswith(("/api/v1/commerce/order-requests/", "/api/v1/parcels/requests/"))
             and path.endswith("/update")
+        )
+        allowed = allowed or (
+            request.method == "POST" and (
+                (path.startswith("/api/v1/commerce/cod-orders/") and path.endswith(("/accept", "/cancel")))
+                or (path.startswith("/api/v1/admin/commerce/cod-orders/") and path.endswith("/quote"))
+                or (path.startswith("/api/v1/admin/commerce/orders/") and path.endswith("/transition"))
+            )
         )
         if not allowed:
             return JSONResponse(
@@ -88,6 +97,7 @@ app.add_middleware(
 
 app.include_router(order_requests, prefix="/api/v1")
 app.include_router(product_media, prefix="/api/v1")
+app.include_router(cod_orders, prefix="/api/v1")
 app.include_router(commerce, prefix="/api/v1")
 app.include_router(commerce_admin, prefix="/api/v1")
 app.include_router(parcels, prefix="/api/v1")

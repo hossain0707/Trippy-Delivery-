@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { API_BASE } from "@/lib/api";
 import { useCallback, useEffect, useState } from "react";
 import { useCredential } from "@/features/account/GoogleAccess";
@@ -64,6 +65,18 @@ type Order = {
   payment_method: string;
   payment_status: string;
   amount_bdt: string;
+  checkout_data?: {
+    mode?: string;
+    quote_pending?: boolean;
+    calculation?: { pending?: string[] };
+  };
+  destination?: {
+    name: string;
+    phone: string;
+    address_line: string;
+    area: string;
+    city: string;
+  };
 };
 type Courier = {
   id: string;
@@ -117,6 +130,7 @@ export function CommerceConsole() {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [couriers, setCouriers] = useState<Courier[]>([]);
   const [records, setRecords] = useState<Record<string, unknown>[]>([]);
+  const [quotes, setQuotes] = useState<Record<string, string>>({});
   const [receipt, setReceipt] = useState<Record<string, string>>({});
   const [assigned, setAssigned] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -211,9 +225,9 @@ export function CommerceConsole() {
       <p className="kicker">OWNER WORKSPACE</p>
       <h2>Catalog, payments & delivery controls</h2>
       <p>
-        Live customer ordering stays closed until inventory, payment receiving
-        details, coverage and pilot approval are complete. Saving these settings
-        does not activate the pilot.
+        COD orders can be reviewed and fulfilled here. Online ordering requires
+        inventory, payment receiving details, coverage and pilot approval are
+        complete. Saving these settings does not activate the pilot.
       </p>
       <nav className="department-pills" aria-label="Commerce administration">
         {[
@@ -1032,7 +1046,68 @@ export function CommerceConsole() {
                 Fulfillment: <strong>{o.status}</strong> · Payment:{" "}
                 <strong>{o.payment_status}</strong> ({o.payment_method})
               </p>
-              <p>Total {money(o.amount_bdt)}</p>
+              <p>
+                {o.checkout_data?.quote_pending
+                  ? "Known estimate (not final)"
+                  : "Total"}{" "}
+                {money(o.amount_bdt)}
+              </p>
+              {o.destination && (
+                <p>
+                  {o.destination.name} · {o.destination.phone}
+                  <br />
+                  {o.destination.address_line}, {o.destination.area},{" "}
+                  {o.destination.city}
+                </p>
+              )}
+              {o.checkout_data?.mode === "cod_order" && (
+                <>
+                  <Link href={"/orders?id=" + o.id}>
+                    View items and order history
+                  </Link>
+                  {o.checkout_data.calculation?.pending?.map((p) => (
+                    <p key={p}>{p}</p>
+                  ))}
+                  {["placed", "pending_review", "quoted"].includes(
+                    o.status,
+                  ) && (
+                    <>
+                      <label>
+                        Final total including preparation and delivery (BDT)
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={quotes[o.id] || ""}
+                          onChange={(e) =>
+                            setQuotes({ ...quotes, [o.id]: e.target.value })
+                          }
+                        />
+                      </label>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void save(
+                            "/admin/commerce/cod-orders/" + o.id + "/quote",
+                            {
+                              final_total_bdt: quotes[o.id],
+                              note: notes[o.id] || "",
+                            },
+                            "POST",
+                          )
+                        }
+                      >
+                        Send final quote for customer acceptance
+                      </button>
+                    </>
+                  )}
+                  <p>
+                    Cash is recorded only on delivery, with the exact collected
+                    amount. Review inventory before confirming.
+                  </p>
+                </>
+              )}
+
               <label>
                 Receipt reference
                 <input
@@ -1044,7 +1119,11 @@ export function CommerceConsole() {
               </label>
               <button
                 className="secondary"
-                disabled={busy || o.payment_status === "paid"}
+                disabled={
+                  busy ||
+                  o.payment_status === "paid" ||
+                  o.payment_method === "cod"
+                }
                 onClick={() =>
                   void save(
                     "/admin/commerce/orders/" + o.id + "/payment",
@@ -1077,7 +1156,7 @@ export function CommerceConsole() {
                 </select>
               </label>
               <label>
-                Review or exception note
+                Review, quote breakdown or exception note
                 <input
                   maxLength={500}
                   value={notes[o.id] || ""}
@@ -1086,6 +1165,21 @@ export function CommerceConsole() {
                   }
                 />
               </label>
+              {o.checkout_data?.mode === "cod_order" &&
+                o.status === "out_for_delivery" && (
+                  <label>
+                    Actual cash collected (BDT)
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={receipt[o.id] || ""}
+                      onChange={(e) =>
+                        setReceipt({ ...receipt, [o.id]: e.target.value })
+                      }
+                    />
+                  </label>
+                )}
               <div className="department-pills">
                 {[
                   "confirmed",
@@ -1107,6 +1201,10 @@ export function CommerceConsole() {
                           status: s,
                           courier_id: assigned[o.id] || null,
                           note: notes[o.id] || "",
+                          cash_collected_bdt:
+                            o.checkout_data?.mode === "cod_order"
+                              ? receipt[o.id] || null
+                              : null,
                         },
                         "POST",
                       )
@@ -1117,8 +1215,8 @@ export function CommerceConsole() {
                 ))}
               </div>
               <p>
-                Preview blocks fulfillment and payment confirmation. Invalid
-                transitions are rejected by the backend.
+                COD orders can progress without an online payment. Unaccepted
+                final quotes and invalid status changes are rejected.
               </p>
             </article>
           ))}

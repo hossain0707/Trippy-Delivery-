@@ -151,11 +151,11 @@ class PilotSettings(BaseModel):
     contact_phone: str = Field(default="", max_length=30)
     support_email: str = Field(default="", max_length=150)
     banner_en: str = Field(
-        default="Our Dhaka market is getting ready. Ordering opens after owner approval.",
+        default="Cash on delivery in Dhaka. Orders are confirmed after store availability checks.",
         max_length=300,
     )
     banner_bn: str = Field(
-        default="ঢাকায় আমাদের বাজার প্রস্তুত হচ্ছে। অনুমোদনের পরে অর্ডার চালু হবে।", max_length=300
+        default="ঢাকায় ক্যাশ অন ডেলিভারি। দোকানের মজুত যাচাইয়ের পরে অর্ডার নিশ্চিত করা হবে।", max_length=300
     )
 
     @model_validator(mode="after")

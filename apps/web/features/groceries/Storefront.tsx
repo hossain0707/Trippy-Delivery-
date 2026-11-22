@@ -25,6 +25,6 @@ export function Storefront() {
       <section className="service" id="shop"><h2>{t("Shop by department", "বিভাগ অনুযায়ী বাজার করুন")}</h2><GroceryCatalog bn={bn}/></section>
     </main>
     <footer className="site-footer"><div className="wrap"><strong>TRIPPY Groceries</strong> <Link href="/photo-credits">{t("Photo credits", "ছবির কৃতিত্ব")}</Link>
-      <p>{t("Dhaka market preview · Orders and payments are disabled.", "ঢাকা বাজার প্রিভিউ · অর্ডার ও পেমেন্ট বন্ধ আছে।")}</p></div></footer>
+      <p>{t("Dhaka market · Cash on delivery. Online payments are disabled.", "ঢাকা বাজার · ক্যাশ অন ডেলিভারি। অনলাইন পেমেন্ট বন্ধ।")}</p></div></footer>
   </div>;
 }

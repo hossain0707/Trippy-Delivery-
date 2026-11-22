@@ -58,7 +58,7 @@ export function OperationsPreview() {
   return (
     <section className="panel operations">
       <p>
-        Preview: payments, order placement and fulfillment are disabled. Catalog
+        COD orders use the Commerce Orders tab. Online payments remain disabled. Catalog
         changes are saved.
       </p>
       <nav className="tabs" aria-label="Operations sections">

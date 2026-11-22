@@ -149,6 +149,9 @@ def cancel(order_id: str, request: Request, db: Session = Depends(get_db),
     order = db.scalar(select(GroceryOrder).where(GroceryOrder.id == order_id).with_for_update())
     if order is None or (order.customer_id != actor.subject and "admin" not in actor.roles):
         raise HTTPException(404, "Order not found")
+    from app.modules.commerce.cod import is_cod_order, cancel_cod
+    if is_cod_order(order):
+        return cancel_cod(order_id, db, actor)
     if order.status == "cancelled":
         return {"status": "cancelled"}
     if order.status not in ("placed", "pending_review", "confirmed"):

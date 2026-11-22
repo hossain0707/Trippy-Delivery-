@@ -6,6 +6,8 @@ import { commerceApi, money } from "@/lib/commerce";
 type Order = {
   checkout_data?: {
     mode?: string;
+    quote_pending?: boolean;
+    quote_note?: string;
     item_snapshots?: { sku: string; name_en: string }[];
   };
   id: string;
@@ -66,7 +68,10 @@ function Record() {
               <strong>{order.payment_status.replaceAll("_", " ")}</strong>
             </p>
             <p>
-              Total: <strong>{money(order.amount_bdt)}</strong>
+              {order.checkout_data?.quote_pending && order.status !== "quoted"
+                ? "Known estimate (not final)"
+                : "Total"}
+              : <strong>{money(order.amount_bdt)}</strong>
             </p>
             {order.status !== "preview" && (
               <p>
@@ -78,6 +83,68 @@ function Record() {
               </p>
             )}
           </div>
+          {order.checkout_data?.mode === "cod_order" &&
+            order.status === "quoted" && (
+              <section className="checkout-warning">
+                <h3>Accept your final cash-on-delivery total</h3>
+                <p>{order.checkout_data.quote_note}</p>
+                <p>
+                  Pay {money(order.amount_bdt)} to the courier on delivery.
+                  Preparation starts after you accept.
+                </p>
+                <button
+                  className="primary"
+                  onClick={async () => {
+                    try {
+                      await commerceApi(
+                        "/commerce/cod-orders/" + order.id + "/accept",
+                        token,
+                        "POST",
+                        { accepted_total_bdt: order.amount_bdt },
+                      );
+                      setOrder(
+                        await commerceApi<Order>(
+                          "/commerce/orders/" + order.id,
+                          token,
+                        ),
+                      );
+                      setError("");
+                    } catch (e) {
+                      setError((e as Error).message);
+                    }
+                  }}
+                >
+                  Accept final total
+                </button>
+              </section>
+            )}
+          {order.checkout_data?.mode === "cod_order" &&
+            ["placed", "pending_review", "quoted", "confirmed"].includes(
+              order.status,
+            ) && (
+              <button
+                className="secondary"
+                onClick={async () => {
+                  try {
+                    await commerceApi(
+                      "/commerce/cod-orders/" + order.id + "/cancel",
+                      token,
+                      "POST",
+                    );
+                    setOrder(
+                      await commerceApi<Order>(
+                        "/commerce/orders/" + order.id,
+                        token,
+                      ),
+                    );
+                  } catch (e) {
+                    setError((e as Error).message);
+                  }
+                }}
+              >
+                Cancel order before preparation
+              </button>
+            )}
           <h3>Items</h3>
           {order.items.map((l) => (
             <p key={l.id}>
