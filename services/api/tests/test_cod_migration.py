@@ -18,7 +18,7 @@ def test_cod_activation_preserves_other_settings_and_later_owner_disable():
     table = ServiceSetting.__table__
     with engine.begin() as conn:
         cfg.attributes["connection"] = conn
-        Base.metadata.create_all(conn)
+        Base.metadata.create_all(conn, tables=[t for t in Base.metadata.sorted_tables if not t.name.startswith("login_")])
         command.stamp(cfg, "0004_checkout_defaults")
         original = {
             "cod_enabled": False,

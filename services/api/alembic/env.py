@@ -4,6 +4,7 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import settings
 from app.core.database import Base
 from app.modules.commerce import models as commerce_models
+from app.modules.customer_auth import models as customer_auth_models
 from app.modules.operations import models as operations_models
 from app.modules.audit import models as audit_models
 from app.modules.couriers import models as courier_models
