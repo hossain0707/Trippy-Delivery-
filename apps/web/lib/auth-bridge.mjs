@@ -2,7 +2,7 @@
 // Fixed upstream prevents open-proxy/SSRF behavior. No new service or binding is required.
 const UPSTREAM =
   "https://trippy-delivery-api-dev-1010753880203.asia-south1.run.app";
-export async function proxyAuth(request, send = fetch) {
+export async function proxyAuth(request, send = (input, init) => globalThis.fetch(input, init)) {
   const url = new URL(request.url);
   const origin = request.headers.get("Origin");
   if (
@@ -43,12 +43,19 @@ export async function proxyAuth(request, send = fetch) {
   const body = request.method === "POST" ? await request.text() : undefined;
   if (body && new TextEncoder().encode(body).length > 16000)
     return new Response("Request too large", { status: 413 });
-  const upstream = await send(UPSTREAM + "/api/v1/auth/" + route, {
-    method: request.method,
-    headers,
-    body,
-    redirect: "error",
-  });
+  let upstream;
+  try {
+    upstream = await send(UPSTREAM + "/api/v1/auth/" + route, {
+      method: request.method, headers, body,
+      // Workers supports manual/follow only. Never follow a redirect with session cookies.
+      redirect: "manual",
+    });
+  } catch {
+    return Response.json({detail:"The sign-in service is temporarily unavailable. Please retry."}, {status:502,headers:{"Cache-Control":"no-store"}});
+  }
+  if (upstream.status >= 300 && upstream.status < 400) {
+    return Response.json({detail:"The sign-in service returned an unexpected redirect. Please retry later."}, {status:502,headers:{"Cache-Control":"no-store"}});
+  }
   const output = new Headers(upstream.headers);
   output.set("Cache-Control", "no-store");
   output.set("Pragma", "no-cache");
