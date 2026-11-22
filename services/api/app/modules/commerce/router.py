@@ -69,7 +69,9 @@ def configuration(db: DB):
         "setup_issues": issues,
         "request_intake_open": False,
         "preview_checkout": c.app_env == "preview",
+        "cod_ordering_open": payments.cod_enabled,
         "payments_collected": False,
+        "online_payments_enabled": False if c.app_env == "preview" else any(getattr(payments, name).enabled for name in ("bkash", "nagad", "rocket", "bank")),
         "ordering_open": c.app_env != "preview" and c.live_orders_enabled and c.pilot_approved,
         "payments": {"cod": {"enabled": payments.cod_enabled}, **result},
         "pilot": get_setting(db, "pilot", PilotSettings).model_dump(mode="json"),
@@ -317,17 +319,22 @@ class Transition(BaseModel):
     ]
     courier_id: str | None = Field(default=None, max_length=36)
     note: str = Field(default="", max_length=500)
+    cash_collected_bdt: Decimal | None = Field(default=None, gt=0, le=1000000, decimal_places=2)
 
 
 @admin.post("/orders/{order_id}/transition")
 def transition(order_id: str, payload: Transition, db: DB, actor: Owner):
-    require_live_orders()
+    from app.modules.commerce.cod import is_cod_order, reserve_stock, collect_cash
     o = db.scalar(select(GroceryOrder).where(GroceryOrder.id == order_id).with_for_update())
     if o is None:
         raise HTTPException(404, "Order not found")
+    cod_order = is_cod_order(o)
+    if not cod_order:
+        require_live_orders()
     allowed = {
         "placed": {"pending_review", "confirmed", "rejected"},
         "pending_review": {"confirmed", "rejected"},
+        "quoted": {"rejected"},
         "confirmed": {"preparing", "rejected"},
         "preparing": {"packed", "failed"},
         "packed": {"assigned", "failed"},
@@ -342,6 +349,14 @@ def transition(order_id: str, payload: Transition, db: DB, actor: Owner):
         and o.payment_status not in ("paid", "test_paid")
     ):
         raise HTTPException(409, "Manual transfer must be verified before confirming the order")
+    if cod_order and payload.status == "confirmed":
+        if o.checkout_data.get("quote_pending"):
+            raise HTTPException(409, "Send a final quote for customer acceptance before confirmation")
+        reserve_stock(db, o)
+    if cod_order and payload.status == "delivered":
+        if len(payload.note.strip()) < 10:
+            raise HTTPException(422, "Record the recipient acknowledgement before completing delivery")
+        collect_cash(db, actor, o, payload.cash_collected_bdt, payload.note)
     if payload.status == "assigned":
         c = db.get(DeliveryPartner, payload.courier_id) if payload.courier_id else None
         if (
@@ -357,7 +372,7 @@ def transition(order_id: str, payload: Transition, db: DB, actor: Owner):
         o.courier_id = c.id
     if payload.status in ("rejected", "failed") and not payload.note.strip():
         raise HTTPException(422, "A reason is required")
-    if payload.status == "rejected":
+    if payload.status == "rejected" and (not cod_order or o.checkout_data.get("stock_reserved")):
         for line in db.scalars(
             select(GroceryLine).where(GroceryLine.order_id == o.id).order_by(GroceryLine.sku)
         ):
@@ -462,6 +477,9 @@ def courier_work(db: DB, actor: Customer):
                 "id": o.id,
                 "status": o.status,
                 "order_number": o.order_number,
+                "payment_method": o.payment_method,
+                "payment_status": o.payment_status,
+                "amount_bdt": str(o.amount_bdt),
                 **(
                     {"destination": o.destination}
                     if active and o.status in ("assigned", "out_for_delivery")
@@ -520,6 +538,7 @@ class CourierUpdate(BaseModel):
     record_id: str = Field(min_length=1, max_length=36)
     status: Literal["picked_up", "in_transit", "out_for_delivery", "delivered", "failed"]
     note: str = Field(min_length=3, max_length=500)
+    cash_collected_bdt: Decimal | None = Field(default=None, gt=0, le=1000000, decimal_places=2)
 
 
 @router.post("/courier/update")
@@ -548,7 +567,9 @@ def courier_update(payload: CourierUpdate, db: DB, actor: Customer):
         if payload.entity == "grocery"
         else record.package.get("request_only", False)
     )
-    if not request_only:
+    from app.modules.commerce.cod import is_cod_order, collect_cash
+    cod_order = payload.entity == "grocery" and is_cod_order(record)
+    if not request_only and not cod_order:
         require_live_orders()
     allowed = {
         "assigned": (
@@ -566,6 +587,10 @@ def courier_update(payload: CourierUpdate, db: DB, actor: Customer):
         raise HTTPException(
             422, "Record the recipient acknowledgement or delivery exception details"
         )
+    if cod_order and payload.status == "delivered":
+        if len(payload.note.strip()) < 10:
+            raise HTTPException(422, "Record the recipient acknowledgement before completing delivery")
+        collect_cash(db, actor, record, payload.cash_collected_bdt, payload.note)
     record.status = payload.status
     if payload.entity == "parcel":
         db.add(ParcelEvent(parcel_id=record.id, actor_id=actor.subject, event_type=payload.status))

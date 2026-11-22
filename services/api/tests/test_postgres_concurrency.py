@@ -106,3 +106,24 @@ def test_postgres_profile_defaults_survive_a_new_session(pg_client):
         saved = db.get(CustomerProfile, "qa-customer")
         assert saved.checkout_defaults["instructions"] == "Call first"
     assert client.get("/api/v1/account/profile").json()["checkout_defaults"]["payment_method"] == "bkash"
+
+
+def test_postgres_cod_confirmation_cannot_oversell(pg_client):
+    client, factory = pg_client
+    from app.modules.commerce.models import ServiceSetting
+    with factory() as db:
+        db.add(ServiceSetting(key="payments", value={"cod_enabled": True}))
+        db.add(ServiceSetting(key="pilot", value={"dhaka_delivery_fee_bdt": "30", "preparation_cut_fee_bdt":"20"}))
+        db.commit()
+    body = request_body()
+    body["expected_total_bdt"] = "670"
+    orders = [client.post("/api/v1/commerce/cod-orders", json=body, headers={"Idempotency-Key":f"cod-pg-order-{i}"}) for i in range(2)]
+    assert all(r.status_code == 201 for r in orders), [r.text for r in orders]
+    app.dependency_overrides[get_actor] = lambda: Actor("owner", frozenset({"admin"}))
+    def confirm(response):
+        return client.post("/api/v1/admin/commerce/orders/" + response.json()["id"] + "/transition", json={"status":"confirmed"})
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(confirm, orders))
+    assert sorted(r.status_code for r in results) == [200,409], [r.text for r in results]
+    with factory() as db:
+        assert db.get(Product,"ROHU").stock_qty == 0

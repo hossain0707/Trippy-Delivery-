@@ -72,6 +72,7 @@ export type BasketLine = {
 };
 export type Configuration = {
   preview_checkout?: boolean;
+  cod_ordering_open?: boolean;
   ordering_open: boolean;
   setup_issues?: string[];
   payments: Record<
