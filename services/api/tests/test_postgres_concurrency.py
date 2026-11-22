@@ -112,6 +112,7 @@ def test_postgres_cod_confirmation_cannot_oversell(pg_client):
     client, factory = pg_client
     from app.modules.commerce.models import ServiceSetting
     with factory() as db:
+        db.get(Product, "ROHU").details = {"department": "fish"}
         db.add(ServiceSetting(key="payments", value={"cod_enabled": True}))
         db.add(ServiceSetting(key="pilot", value={"dhaka_delivery_fee_bdt": "30", "preparation_cut_fee_bdt":"20"}))
         db.commit()
