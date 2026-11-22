@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import secrets
 from datetime import UTC, datetime
+from threading import BoundedSemaphore
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.core.auth import Actor
@@ -13,11 +14,20 @@ def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+# Keep memory-hard password work within a small Cloud Run instance's memory budget.
+_password_work = BoundedSemaphore(1)
+
+
+def derive(password: str, salt: str) -> str:
+    with _password_work:
+        return hashlib.scrypt(
+            password.encode(), salt=bytes.fromhex(salt), n=2**17, r=8, p=1, maxmem=256 * 1024 * 1024
+        ).hex()
+
+
 def hash_password(password: str) -> str:
     salt = secrets.token_hex(16)
-    key = hashlib.scrypt(
-        password.encode(), salt=bytes.fromhex(salt), n=2**17, r=8, p=1, maxmem=256 * 1024 * 1024
-    ).hex()
+    key = derive(password, salt)
     return f"scrypt${salt}${key}"
 
 
@@ -28,9 +38,7 @@ def verify_password(password: str, encoded: str | None) -> bool:
         algorithm, salt, expected = encoded.split("$")
         if algorithm != "scrypt":
             return False
-        actual = hashlib.scrypt(
-            password.encode(), salt=bytes.fromhex(salt), n=2**17, r=8, p=1, maxmem=256 * 1024 * 1024
-        ).hex()
+        actual = derive(password, salt)
         return hmac.compare_digest(actual, expected)
     except (ValueError, TypeError):
         return False
