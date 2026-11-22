@@ -16,6 +16,7 @@ from app.modules.commerce.router import router as commerce, admin as commerce_ad
 from app.modules.commerce.requests import router as order_requests
 from app.modules.commerce.media import router as product_media
 from app.modules.commerce.cod import router as cod_orders
+from app.modules.customer_auth.router import router as customer_auth
 
 configure_logs()
 config = settings()
@@ -72,6 +73,7 @@ async def preview_write_guard(request: Request, call_next):
                 or (path.startswith("/api/v1/admin/commerce/orders/") and path.endswith("/transition"))
             )
         )
+        allowed = allowed or (request.method == "POST" and path.startswith("/api/v1/auth/"))
         if not allowed:
             return JSONResponse(
                 status_code=503,
@@ -79,7 +81,7 @@ async def preview_write_guard(request: Request, call_next):
             )
     response = await call_next(request)
     if request.url.path.startswith(
-        ("/api/v1/account", "/api/v1/admin", "/api/v1/parcels/", "/api/v1/commerce")
+        ("/api/v1/auth", "/api/v1/account", "/api/v1/admin", "/api/v1/parcels/", "/api/v1/commerce")
     ):
         response.headers["Cache-Control"] = "no-store"
     return response
@@ -92,10 +94,11 @@ app.add_middleware(
     allow_origins=[s.strip() for s in config.cors_origins.split(",") if s.strip()],
     allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Content-Type", "Authorization", "Idempotency-Key", "X-Dev-Actor"],
-    allow_credentials=False,
+    allow_credentials=True,
 )
 
 
+app.include_router(customer_auth, prefix="/api/v1")
 app.include_router(order_requests, prefix="/api/v1")
 app.include_router(product_media, prefix="/api/v1")
 app.include_router(cod_orders, prefix="/api/v1")

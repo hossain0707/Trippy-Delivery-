@@ -6,6 +6,8 @@ from fastapi import Depends, Header, HTTPException
 from jwt import PyJWKClient
 
 from app.core.config import Settings, settings
+from app.core.database import get_db
+from sqlalchemy.orm import Session
 
 
 @dataclass(frozen=True)
@@ -25,6 +27,7 @@ def get_actor(
     authorization: str | None = Header(default=None),
     x_dev_actor: str | None = Header(default=None),
     config: Settings = Depends(settings),
+    db: Session = Depends(get_db),
 ) -> Actor:
     # Isolated local/test convenience only. Not a substitute for real authentication.
     if config.app_env in ("local", "test") and config.allow_dev_auth and x_dev_actor:
@@ -32,6 +35,9 @@ def get_actor(
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "Authentication required")
     token = authorization[7:].strip()
+    if token.startswith("td_access_"):
+        from app.modules.customer_auth.security import access_actor
+        return access_actor(token, db)
     if config.google_client_id:
         return google_actor(token, config)
     if not all([config.jwt_issuer, config.jwt_audience, config.jwt_jwks_url]):

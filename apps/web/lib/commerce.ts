@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "./customer-session";
 import { API_BASE } from "./api";
 export type Preparation = {
   id: string;
@@ -107,16 +108,20 @@ export async function commerceApi<T>(
   payload?: unknown,
   idempotency?: string,
 ): Promise<T> {
-  const response = await fetch(API_BASE + "/api/v1" + path, {
-    method,
-    cache: "no-store",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-      ...(idempotency ? { "Idempotency-Key": idempotency } : {}),
+  const response = await authenticatedFetch(
+    API_BASE + "/api/v1" + path,
+    {
+      method,
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: "Bearer " + token } : {}),
+        ...(idempotency ? { "Idempotency-Key": idempotency } : {}),
+      },
+      body: payload === undefined ? undefined : JSON.stringify(payload),
     },
-    body: payload === undefined ? undefined : JSON.stringify(payload),
-  });
+    token,
+  );
   const data = await response.json();
   if (!response.ok)
     throw new Error(

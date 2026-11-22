@@ -301,7 +301,7 @@ function AccountWorkspace() {
                       />
                     </label>
                     <label>
-                      {t("Verified Google email", "যাচাইকৃত গুগল ইমেইল")}
+                      {t("Verified email", "যাচাইকৃত ইমেইল")}
                       <input readOnly value={profile.email || ""} />
                     </label>
                     <label>

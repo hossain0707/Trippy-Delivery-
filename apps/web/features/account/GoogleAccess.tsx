@@ -1,193 +1,255 @@
 "use client";
-
 import Script from "next/script";
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { API_BASE } from "@/lib/api";
+import {
+  AuthError,
+  authRequest,
+  restoreSession,
+  updateSession,
+  watchSession,
+  type AuthProfile,
+  type AuthSession,
+} from "@/lib/customer-session";
+import { AuthForm, type AuthMode } from "./AuthForm";
 
-type Profile = { name: string | null; email: string; is_admin: boolean };
-type GoogleIdentity = {
-  initialize(options: {
-    client_id: string;
-    callback: (response: { credential: string }) => void;
-  }): void;
-  renderButton(
-    element: HTMLElement,
-    options: { theme: "outline"; size: "large"; text: "continue_with" },
-  ): void;
-};
-
-type Session = {
-  profile: Profile | null;
+type SessionState = {
+  profile: AuthProfile | null;
   credential: string;
-  setProfile: (p: Profile | null) => void;
-  setCredential: (c: string) => void;
+  loading: boolean;
+  error: string;
+  retry: () => void;
 };
-const SessionContext = createContext<Session | null>(null);
+const SessionContext = createContext<SessionState | null>(null);
+const CredentialContext = createContext("");
+export const useCredential = () => useContext(CredentialContext);
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [credential, setCredential] = useState("");
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+  useEffect(() => watchSession(setSession), []);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+    restoreSession()
+      .catch((e) => {
+        if (!active) return;
+        if (e instanceof AuthError && e.status === 401) {
+          updateSession(null);
+          setError("");
+        } else
+          setError(
+            "Your account could not be restored. Please check your connection and retry.",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    const refresh = () => {
+      if (document.visibilityState === "visible")
+        void restoreSession().catch((e) => {
+          if (e instanceof AuthError && e.status === 401) updateSession(null);
+        });
+    };
+    const timer = setInterval(refresh, 10 * 60 * 1000);
+    const channel =
+      typeof BroadcastChannel !== "undefined"
+        ? new BroadcastChannel("trippy-auth")
+        : null;
+    if (channel)
+      channel.onmessage = (event) => {
+        if (event.data === "signout") updateSession(null);
+        else if (event.data === "signin")
+          void restoreSession().catch((e) => {
+            if (e instanceof AuthError && e.status === 401) updateSession(null);
+          });
+      };
+    window.addEventListener("focus", refresh);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      channel?.close();
+      window.removeEventListener("focus", refresh);
+    };
+  }, [retry]);
   return (
     <SessionContext.Provider
-      value={{ profile, setProfile, credential, setCredential }}
+      value={{
+        profile: session?.profile || null,
+        credential: session?.credential || "",
+        loading,
+        error,
+        retry: () => setRetry((v) => v + 1),
+      }}
     >
       {children}
     </SessionContext.Provider>
   );
 }
-const CredentialContext = createContext("");
-export const useCredential = () => useContext(CredentialContext);
-
+export function broadcastAuth(event: "signin" | "signout") {
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel("trippy-auth");
+    channel.postMessage(event);
+    channel.close();
+  }
+}
+export function GoogleButton({
+  onStatus,
+}: {
+  onStatus: (value: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  function initialize() {
+    const identity = (
+      window as Window & {
+        google?: {
+          accounts: {
+            id: {
+              initialize: (options: {
+                client_id: string;
+                callback: (response: { credential: string }) => void;
+              }) => void;
+              renderButton: (
+                element: HTMLElement,
+                options: Record<string, string>,
+              ) => void;
+            };
+          };
+        };
+      }
+    ).google?.accounts.id;
+    if (!identity || !ref.current || !clientId) return;
+    identity.initialize({
+      client_id: clientId,
+      callback: ({ credential }) => {
+        onStatus("Verifying your Google account…");
+        void authRequest<AuthSession>("google", { credential })
+          .then((s) => {
+            updateSession(s);
+            broadcastAuth("signin");
+            onStatus("");
+          })
+          .catch((e) => onStatus(e.message));
+      },
+    });
+    identity.renderButton(ref.current, {
+      theme: "outline",
+      size: "large",
+      text: "continue_with",
+    });
+  }
+  return clientId ? (
+    <>
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        onReady={initialize}
+        onError={() =>
+          onStatus("Google sign-in could not load. Please try again.")
+        }
+      />
+      <div ref={ref} className="auth-google" />
+    </>
+  ) : (
+    <p>Google sign-in is unavailable.</p>
+  );
+}
 export function GoogleAccess({
   admin = false,
   compact = false,
   bn = false,
+  mode = "signin",
   children,
 }: {
   admin?: boolean;
   compact?: boolean;
   bn?: boolean;
+  mode?: AuthMode;
   children?: ReactNode;
 }) {
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const button = useRef<HTMLDivElement>(null);
   const session = useContext(SessionContext);
-  const [localProfile, localSetProfile] = useState<Profile | null>(null);
-  const [localCredential, localSetCredential] = useState("");
-  const { profile, setProfile, credential, setCredential } = session || {
-    profile: localProfile,
-    setProfile: localSetProfile,
-    credential: localCredential,
-    setCredential: localSetCredential,
-  };
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-
-  async function signIn(credential: string) {
-    setBusy(true);
-    setStatus("");
-    setProfile(null);
-    setCredential("");
-    try {
-      const response = await fetch(
-        API_BASE + (admin ? "/api/v1/admin/session" : "/api/v1/account"),
-        {
-          headers: { Authorization: "Bearer " + credential },
-          cache: "no-store",
-        },
-      );
-      if (response.status === 403) {
-        setStatus("This Google account does not have administrator access.");
-        return;
-      }
-      if (!response.ok) throw new Error("Sign-in failed");
-      setProfile((await response.json()) as Profile);
-      setCredential(credential);
-    } catch {
-      setStatus("Google sign-in could not be completed. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  if (!session) return <p role="alert">Session provider is unavailable.</p>;
+  if (session.loading)
+    return (
+      <section className="panel" role="status">
+        {bn ? "আপনার অ্যাকাউন্ট খোঁজা হচ্ছে…" : "Restoring your signed-in account…"}
+      </section>
+    );
+  if (session.error && !session.profile)
+    return (
+      <section className="panel">
+        <p role="alert">{session.error}</p>
+        <button className="secondary" onClick={session.retry}>
+          Retry account
+        </button>
+      </section>
+    );
+  if (!session.profile)
+    return (
+      <AuthForm
+        admin={admin}
+        initialMode={mode}
+        initialBn={bn}
+        compact={compact}
+      />
+    );
+  const { profile, credential } = session;
   return (
     <>
-      <section
-        id={compact ? "checkout-sign-in" : undefined}
-        className={compact ? "panel checkout-session" : "panel"}
-      >
+      <section className={compact ? "panel checkout-session" : "panel"}>
         <h2>
           {admin
-            ? "Administrator sign-in"
-            : compact
-              ? profile
-                ? bn
-                  ? "আপনার অ্যাকাউন্টে সাইন ইন করা আছে"
-                  : "Signed in to your account"
-                : bn
-                  ? "সংরক্ষিত তথ্যের জন্য সাইন ইন করুন"
-                  : "Sign in to use saved details"
-              : "Google account"}
+            ? "Administrator account"
+            : bn
+              ? "আপনার অ্যাকাউন্টে সাইন ইন করা আছে"
+              : "Signed in to your account"}
         </h2>
-        {process.env.NEXT_PUBLIC_INTERNAL_QA === "true" && !profile && (
-          <div>
-            <p>Isolated internal QA — no live orders or payments</p>
-            <button onClick={() => void signIn("qa-customer")}>
-              Use isolated customer
-            </button>
-            <button onClick={() => void signIn("qa-owner")}>
-              Use isolated owner
-            </button>
-          </div>
-        )}
-        {clientId ? (
-          <>
-            <Script
-              src="https://accounts.google.com/gsi/client"
-              onReady={() => {
-                const identity = (
-                  window as Window & {
-                    google?: { accounts: { id: GoogleIdentity } };
-                  }
-                ).google?.accounts.id;
-                if (!identity || !button.current) return;
-                identity.initialize({
-                  client_id: clientId,
-                  callback: ({ credential }) => {
-                    void signIn(credential);
-                  },
-                });
-                identity.renderButton(button.current, {
-                  theme: "outline",
-                  size: "large",
-                  text: "continue_with",
-                });
-              }}
-              onError={() =>
-                setStatus("The Google sign-in button could not load.")
-              }
-            />
-            <div ref={button} hidden={!!profile || busy} />
-          </>
-        ) : (
-          <p>Google sign-in is unavailable on this deployment.</p>
-        )}
-        <p role="status">{busy ? "Verifying your Google account…" : status}</p>
-        {admin && profile && !profile.is_admin && (
+        <div>
+          <p>
+            <strong>{profile.name || profile.email}</strong>
+          </p>
+          <p>{profile.email}</p>
+          {!admin && profile.is_admin && (
+            <p>
+              <a href="/admin">Admin dashboard</a>
+            </p>
+          )}
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              void authRequest("signout", {})
+                .then(() => {
+                  updateSession(null);
+                  broadcastAuth("signout");
+                })
+                .catch(() => setStatus("Could not sign out. Please try again."))
+                .finally(() => setBusy(false));
+            }}
+          >
+            {bn ? "সাইন আউট" : "Sign out"}
+          </button>
+          <p role="status">{status}</p>
+        </div>
+        {admin && !profile.is_admin && (
           <p role="alert">
-            This Google account does not have administrator access.
+            This account does not have owner access. Sign in with the designated
+            Google owner account.
           </p>
         )}
-        {profile && (
-          <div>
-            <p>
-              <strong>{profile.name || profile.email}</strong>
-            </p>
-            <p>{profile.email}</p>
-            {!admin && profile.is_admin && (
-              <p>
-                <a href="/admin">Admin dashboard</a>
-              </p>
-            )}
-            <button
-              className="secondary"
-              type="button"
-              onClick={() => {
-                setProfile(null);
-                setCredential("");
-              }}
-            >
-              {compact && bn ? "সাইন আউট" : "Sign out"}
-            </button>
-          </div>
-        )}
       </section>
-      {profile && (!admin || profile.is_admin) && (
+      {(!admin || profile.is_admin) && (
         <CredentialContext.Provider value={credential}>
           {children}
         </CredentialContext.Provider>

@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import model_validator, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     google_client_id: str | None = None
     google_admin_email: str | None = None
     google_admin_subject: str | None = None
+    customer_app_origin: str = "https://trippy-delivery.pages.dev"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_from: str | None = None
     live_orders_enabled: bool = False
     pilot_approved: bool = False
     active_cities: str = "dhaka"

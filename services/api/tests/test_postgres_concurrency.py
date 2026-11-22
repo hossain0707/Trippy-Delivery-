@@ -204,3 +204,48 @@ def test_postgres_duplicate_purchase_receipt_adds_stock_only_once(pg_client):
     with factory() as db:
         assert db.get(Product, "ROHU").stock_qty == 1
         assert db.query(CommerceEvent).filter_by(entity_id=ident, event="purchased").count() == 1
+
+
+def test_postgres_competing_reset_links_are_single_use_without_deadlock(pg_client):
+    from datetime import timedelta
+    from app.modules.customer_auth.models import LoginIdentity, EmailChallenge, now
+    from app.modules.customer_auth.security import digest, hash_password
+
+    client, factory = pg_client
+    tokens = [
+        "first-reset-token-with-enough-entropy-123",
+        "second-reset-token-with-enough-entropy-456",
+    ]
+    with factory() as db:
+        db.add(
+            LoginIdentity(
+                subject="email:reset-test",
+                email="reset@example.com",
+                name="Reset customer",
+                provider="email",
+                verified=True,
+                password_hash=hash_password("Original test password"),
+            )
+        )
+        db.flush()
+        for token in tokens:
+            db.add(
+                EmailChallenge(
+                    digest=digest(token),
+                    subject="email:reset-test",
+                    purpose="reset",
+                    expires_at=now() + timedelta(minutes=30),
+                )
+            )
+        db.commit()
+
+    def reset(token):
+        return client.post(
+            "/api/v1/auth/reset-password",
+            json={"token": token, "password": "Replacement test password"},
+            headers={"Origin": "https://trippy-delivery.pages.dev"},
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(reset, tokens))
+    assert sorted(r.status_code for r in responses) == [200, 400], [r.text for r in responses]
