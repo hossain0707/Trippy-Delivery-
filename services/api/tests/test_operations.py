@@ -276,3 +276,35 @@ def test_admin_session_route_precedes_collection_route(client):
     assert response.status_code == 200
     assert response.json()["is_admin"] is True
     assert response.json()["email"] == "owner@example.com"
+
+
+def test_checkout_defaults_persist_across_sessions_and_stay_owner_scoped(client):
+    browser, factory = client
+    defaults = {"address_line": "House 4 Road 7", "area": "Uttara", "city": "Dhaka", "postal_code": "1230", "instructions": "Call at the gate", "preparation_notes": "Pack separately", "payment_method": "bkash"}
+    saved = browser.put("/api/v1/account/profile", json={"name": "Customer", "phone": "01712345678", "language": "bn", "checkout_defaults": defaults})
+    assert saved.status_code == 200
+    assert saved.json()["checkout_defaults"] == defaults
+    assert browser.get("/api/v1/account/profile").json()["checkout_defaults"] == defaults
+    from app.modules.operations.models import CustomerProfile
+    with factory() as session:
+        persisted = session.get(CustomerProfile, "regression-customer")
+        assert persisted.checkout_defaults == defaults
+    owner()
+    assert browser.get("/api/v1/account/profile").json()["checkout_defaults"] == {}
+
+
+def test_legacy_profile_updates_do_not_erase_checkout_defaults(client):
+    browser, _ = client
+    browser.put("/api/v1/account/profile", json={"name": "Customer", "checkout_defaults": {"area": "Uttara", "instructions": "Call first"}})
+    assert browser.put("/api/v1/account/profile", json={"name": "Edited"}).status_code == 200
+    result = browser.get("/api/v1/account/profile").json()
+    assert result["name"] == "Edited"
+    assert result["checkout_defaults"]["instructions"] == "Call first"
+    assert browser.put("/api/v1/account/profile", json={"name": "Edited", "checkout_defaults": None}).status_code == 200
+    assert browser.get("/api/v1/account/profile").json()["checkout_defaults"]["area"] == "Uttara"
+
+
+@pytest.mark.parametrize("defaults", [{"payment_method": "unknown"}, {"pin": "1234"}, {"otp": "123456"}, {"payment_reference": "secret"}, {"instructions": "x" * 1001}, {"address_line": "x" * 301}, {"postal_code": "x" * 21}, {"subject": "google:owner"}])
+def test_checkout_defaults_reject_invalid_or_sensitive_fields(client, defaults):
+    browser, _ = client
+    assert browser.put("/api/v1/account/profile", json={"name": "Customer", "checkout_defaults": defaults}).status_code == 422

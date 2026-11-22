@@ -23,11 +23,23 @@ router = APIRouter()
 admin = APIRouter(prefix="/admin", dependencies=[Depends(require_admin)])
 
 
+class CheckoutDefaults(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    address_line: str = Field(default="", max_length=300)
+    area: str = Field(default="", max_length=120)
+    city: str = Field(default="Dhaka", max_length=80)
+    postal_code: str = Field(default="", max_length=20)
+    instructions: str = Field(default="", max_length=1000)
+    preparation_notes: str = Field(default="", max_length=500)
+    payment_method: Literal["cod", "bkash", "nagad", "rocket", "bank"] = "cod"
+
+
 class ProfileEdit(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(default="", max_length=20, pattern=r"^[+0-9 ()-]*$")
     language: Literal["en", "bn"] = "en"
+    checkout_defaults: CheckoutDefaults | None = None
 
 
 class ProductEdit(BaseModel):
@@ -85,7 +97,10 @@ def save_profile(
     actor: Annotated[Actor, Depends(get_actor)],
 ):
     value = profile(db, actor)
-    for key, data in payload.model_dump().items():
+    # Older profile clients must not erase saved checkout defaults.
+    for key, data in payload.model_dump(exclude_unset=True).items():
+        if key == "checkout_defaults" and data is None:
+            continue
         setattr(value, key, data)
     value.email = actor.email
     value.updated_at = datetime.now(UTC)

@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import JSON, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -13,6 +13,7 @@ class CustomerProfile(Base):
     name: Mapped[str | None] = mapped_column(String(120))
     phone: Mapped[str] = mapped_column(String(20), default="")
     language: Mapped[str] = mapped_column(String(2), default="en")
+    checkout_defaults: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict, server_default="{}")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
