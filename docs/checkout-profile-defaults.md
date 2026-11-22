@@ -13,3 +13,7 @@ Promotions, transaction references and manually entered per-order distance are n
 Validation covers profile persistence and customer isolation, legacy updates, sensitive-field rejection, additive migration of populated profiles, PostgreSQL session persistence, payload allowlisting and late-load/edited-field behavior. The full catalog preview coverage tests remain in place.
 
 Deployment must retain `APP_ENV=preview`; live payments and real fulfillment remain disabled. Actual Google-account save/reload verification requires an authenticated browser session; isolated automated tests do not replace that account-level check.
+
+## Verified release checks
+
+131 backend tests and 27 frontend tests passed in CI, including PostgreSQL and migrations. A real existing customer Google session verified profile-to-checkout autofill, preservation of profile defaults after one-order edits, saving from checkout, and persistence after signing out and signing back in. Temporary QA values were restored to the original profile field values. No order or payment was created. Desktop three-column geometry and all mobile steps were checked at 337 CSS pixels with no horizontal overflow. Review request errors are shown in the delivery step on narrow screens as well as the summary.

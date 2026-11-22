@@ -269,6 +269,9 @@ function CheckoutForm({
             {t("Retry saved details", "আবার লোড করুন")}
           </button>
         )}
+        <p className="checkout-status checkout-form-status" role="status">
+          {status}
+        </p>
         <form
           id="checkout-delivery-form"
           onSubmit={async (e) => {

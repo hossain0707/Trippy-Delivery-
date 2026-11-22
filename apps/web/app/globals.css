@@ -91,3 +91,5 @@
 @media(max-width:380px){.checkout-basket-row{grid-template-columns:48px minmax(0,1fr);gap:9px}.checkout-basket-row .basket-product-image{width:48px;height:48px}.checkout-item-controls{grid-column:2;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}.checkout-item-main select{font-size:.72rem}.checkout-delivery .fields{grid-template-columns:1fr}.checkout-steps button{font-size:.72rem;gap:.3rem}.checkout-steps button span{width:25px;height:25px}}
 
 .profile-form-fields{border:0;padding:0;margin:0;min-width:0}
+
+.checkout-form-status{display:none}@media(max-width:800px){.checkout-form-status:not(:empty){display:block}}
