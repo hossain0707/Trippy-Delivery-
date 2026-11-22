@@ -76,8 +76,9 @@ def overview(db: DB):
         select(GroceryOrder).where(live).order_by(GroceryOrder.created_at.desc()).limit(6)
     ).all()
     return {
+        "awaiting_purchase": count(GroceryOrder.status == "awaiting_purchase"),
         "new_orders": count(GroceryOrder.status.in_(["placed", "requested", "pending_review"])),
-        "preparing": count(GroceryOrder.status.in_(["confirmed", "preparing", "packed"])),
+        "preparing": count(GroceryOrder.status.in_(["awaiting_purchase", "purchased", "confirmed", "preparing", "packed"])),
         "out_for_delivery": count(GroceryOrder.status.in_(["assigned", "out_for_delivery"])),
         "cod_to_collect_bdt": str(unpaid),
         "awaiting_final_price": count(

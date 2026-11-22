@@ -308,6 +308,7 @@ def confirm_payment(order_id: str, payload: PaymentConfirmation, db: DB, actor: 
 class Transition(BaseModel):
     status: Literal[
         "pending_review",
+        "awaiting_purchase",
         "confirmed",
         "preparing",
         "packed",
@@ -341,6 +342,11 @@ def transition(order_id: str, payload: Transition, db: DB, actor: Owner):
         "assigned": {"out_for_delivery", "failed"},
         "out_for_delivery": {"delivered", "failed"},
     }
+    if cod_order:
+        allowed["placed"].add("awaiting_purchase")
+        allowed["pending_review"].add("awaiting_purchase")
+        allowed["awaiting_purchase"] = {"rejected"}
+        allowed["purchased"] = {"preparing", "rejected"}
     if payload.status not in allowed.get(o.status, set()):
         raise HTTPException(409, "Invalid fulfillment transition")
     if (
@@ -349,6 +355,8 @@ def transition(order_id: str, payload: Transition, db: DB, actor: Owner):
         and o.payment_status not in ("paid", "test_paid")
     ):
         raise HTTPException(409, "Manual transfer must be verified before confirming the order")
+    if cod_order and payload.status == "awaiting_purchase" and o.checkout_data.get("quote_pending"):
+        raise HTTPException(409, "The customer must accept the final price before purchase confirmation")
     if cod_order and payload.status == "confirmed":
         if o.checkout_data.get("quote_pending"):
             raise HTTPException(409, "Send a final quote for customer acceptance before confirmation")
@@ -378,6 +386,8 @@ def transition(order_id: str, payload: Transition, db: DB, actor: Owner):
         ):
             product = db.scalar(select(Product).where(Product.sku == line.sku).with_for_update())
             product.stock_qty += line.quantity
+        if cod_order:
+            o.checkout_data = {**o.checkout_data, "stock_reserved": False}
     if payload.status in ("rejected", "failed") and o.payment_status in ("paid", "test_paid"):
         o.payment_status = "refund_required"
     o.status = payload.status

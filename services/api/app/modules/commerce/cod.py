@@ -44,7 +44,12 @@ def reserve_stock(db, order):
     ).all()
     products = []
     for line in lines:
-        p = db.scalar(select(Product).where(Product.sku == line.sku).with_for_update())
+        p = db.scalar(
+            select(Product)
+            .where(Product.sku == line.sku)
+            .execution_options(populate_existing=True)
+            .with_for_update()
+        )
         if p is None or not p.active or p.stock_qty < line.quantity:
             raise HTTPException(
                 409, "Update verified available inventory before confirming: " + line.sku
@@ -223,13 +228,23 @@ def accept_cod(order_id: str, payload: AcceptQuote, db: DB, actor: Customer):
         raise HTTPException(404, "COD order not found")
     if order.status != "quoted" or payload.accepted_total_bdt != order.amount_bdt:
         raise HTTPException(409, "Reload and accept the latest final quote")
-    reserve_stock(db, order)
+    stock = stock_availability(db, order)
+    if any(not item["active"] for item in stock["items"]):
+        raise HTTPException(
+            409, "A product is no longer active. Contact the store before accepting"
+        )
+    if stock["can_confirm"] or all(
+        i["active"] and Decimal(i["shortfall"]) == 0 for i in stock["items"]
+    ):
+        reserve_stock(db, order)
+        order.status = "confirmed"
+    else:
+        order.status = "awaiting_purchase"
     order.checkout_data = {
         **order.checkout_data,
         "quote_pending": False,
         "accepted_total_bdt": str(payload.accepted_total_bdt),
     }
-    order.status = "confirmed"
     event(
         db,
         actor,
@@ -253,16 +268,171 @@ def cancel_cod(order_id: str, db: DB, actor: Customer):
         raise HTTPException(404, "COD order not found")
     if order.status == "cancelled":
         return {"status": order.status}
-    if order.status not in ("placed", "pending_review", "quoted", "confirmed"):
+    if order.status not in (
+        "placed",
+        "pending_review",
+        "quoted",
+        "confirmed",
+        "awaiting_purchase",
+        "purchased",
+    ):
         raise HTTPException(409, "Preparation has started; contact support to request cancellation")
     if order.checkout_data.get("stock_reserved"):
         for line in db.scalars(
             select(GroceryLine).where(GroceryLine.order_id == order.id).order_by(GroceryLine.sku)
         ):
-            product = db.scalar(select(Product).where(Product.sku == line.sku).with_for_update())
+            product = db.scalar(
+                select(Product)
+                .where(Product.sku == line.sku)
+                .execution_options(populate_existing=True)
+                .with_for_update()
+            )
             product.stock_qty += line.quantity
         order.checkout_data = {**order.checkout_data, "stock_reserved": False}
     order.status = "cancelled"
     event(db, actor, "grocery_order", order.id, "cancelled")
     db.commit()
     return {"status": order.status}
+
+
+def stock_availability(db, order):
+    reserved = bool(order.checkout_data.get("stock_reserved"))
+    lines = []
+    for line in db.scalars(
+        select(GroceryLine).where(GroceryLine.order_id == order.id).order_by(GroceryLine.sku)
+    ):
+        p = db.get(Product, line.sku)
+        available = p.stock_qty if p else Decimal(0)
+        lines.append(
+            {
+                "sku": line.sku,
+                "name_en": p.name_en if p else line.sku,
+                "name_bn": p.name_bn if p else line.sku,
+                "unit": p.unit if p else "",
+                "required": str(line.quantity),
+                "available": str(available),
+                "shortfall": str(
+                    Decimal(0) if reserved else max(Decimal(0), line.quantity - available)
+                ),
+                "active": bool(p and p.active),
+                "reserved": reserved,
+            }
+        )
+    return {
+        "items": lines,
+        "stock_reserved": reserved,
+        "can_confirm": not order.checkout_data.get("quote_pending")
+        and all(l["active"] and Decimal(l["shortfall"]) == 0 for l in lines),
+        "quote_pending": bool(order.checkout_data.get("quote_pending")),
+    }
+
+
+@router.get("/admin/commerce/cod-orders/{order_id}/availability")
+def availability(order_id: str, db: DB, actor: Owner):
+    order = db.get(GroceryOrder, order_id)
+    if order is None or not is_cod_order(order):
+        raise HTTPException(404, "COD order not found")
+    return stock_availability(db, order)
+
+
+class StockCount(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    available_qty: Decimal = Field(ge=0, le=1000000, decimal_places=3)
+    expected_qty: Decimal = Field(ge=0, le=1000000, decimal_places=3)
+    verified: bool
+    note: str = Field(min_length=3, max_length=500)
+
+
+@router.put("/admin/commerce/catalog/{sku}/stock")
+def count_stock(sku: str, payload: StockCount, db: DB, actor: Owner):
+    if not payload.verified:
+        raise HTTPException(422, "Confirm this is actual verified available stock")
+    p = db.scalar(select(Product).where(Product.sku == sku).with_for_update())
+    if p is None:
+        raise HTTPException(404, "Product not found")
+    if p.stock_qty != payload.expected_qty:
+        raise HTTPException(409, "Stock changed. Refresh availability before saving a new count")
+    p.stock_qty = payload.available_qty
+    event(
+        db,
+        actor,
+        "product",
+        sku,
+        "stock_count_verified",
+        {
+            "previous": str(payload.expected_qty),
+            "available": str(p.stock_qty),
+            "note": payload.note,
+        },
+    )
+    db.commit()
+    return {"stock_qty": str(p.stock_qty)}
+
+
+class ReceiptLine(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sku: str = Field(min_length=1, max_length=50)
+    quantity: Decimal = Field(ge=0, le=1000000, decimal_places=3)
+
+
+class PurchaseReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[ReceiptLine] = Field(min_length=1, max_length=50)
+    verified: bool
+    note: str = Field(min_length=3, max_length=500)
+
+
+@router.post("/admin/commerce/cod-orders/{order_id}/purchase")
+def receive_purchase(order_id: str, payload: PurchaseReceipt, db: DB, actor: Owner):
+    if not payload.verified:
+        raise HTTPException(
+            422, "Verify the goods were actually received before recording a purchase"
+        )
+    digest = hashlib.sha256(
+        json.dumps(payload.model_dump(mode="json"), sort_keys=True).encode()
+    ).hexdigest()
+    order = db.scalar(select(GroceryOrder).where(GroceryOrder.id == order_id).with_for_update())
+    if order is None or not is_cod_order(order):
+        raise HTTPException(404, "COD order not found")
+    if order.checkout_data.get("purchase_receipt_hash") == digest:
+        return {"status": order.status, "payment_status": order.payment_status}
+    if order.status != "awaiting_purchase" or order.checkout_data.get("quote_pending"):
+        raise HTTPException(409, "Only an accepted order awaiting purchase can receive goods")
+    required = db.scalars(
+        select(GroceryLine).where(GroceryLine.order_id == order.id).order_by(GroceryLine.sku)
+    ).all()
+    quantities = {i.sku: i.quantity for i in payload.items}
+    if len(quantities) != len(payload.items) or set(quantities) != {l.sku for l in required}:
+        raise HTTPException(422, "Provide one received quantity for every ordered product")
+    locked = []
+    for line in required:
+        p = db.scalar(
+            select(Product)
+            .where(Product.sku == line.sku)
+            .execution_options(populate_existing=True)
+            .with_for_update()
+        )
+        if p is None or not p.active or p.stock_qty + quantities[line.sku] < line.quantity:
+            raise HTTPException(
+                409, "Received goods plus available stock do not cover: " + line.sku
+            )
+        locked.append(p)
+    for p in locked:
+        p.stock_qty += quantities[p.sku]
+    reserve_stock(db, order)
+    order.status = "purchased"
+    order.checkout_data = {
+        **order.checkout_data,
+        "purchase_receipt_hash": digest,
+        "purchase_receipt": payload.model_dump(mode="json"),
+    }
+    event(
+        db,
+        actor,
+        "grocery_order",
+        order.id,
+        "purchased",
+        {"note": payload.note, "items": payload.model_dump(mode="json")["items"]},
+    )
+    db.commit()
+    return {"status": order.status, "payment_status": order.payment_status}

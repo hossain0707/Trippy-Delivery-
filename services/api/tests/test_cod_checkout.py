@@ -149,15 +149,24 @@ def test_store_weighs_customer_accepts_quote_and_stock_required(cod):
     actor()
     accept = f"/api/v1/commerce/cod-orders/{ident}/accept"
     assert browser.post(accept, json={"accepted_total_bdt": "660"}).status_code == 409
-    assert browser.post(accept, json={"accepted_total_bdt": "665"}).status_code == 409
-    with factory() as db:
-        db.get(Product, "ROHU").stock_qty = 5
-        db.commit()
-    assert browser.post(accept, json={"accepted_total_bdt": "665"}).status_code == 200
+    accepted = browser.post(accept, json={"accepted_total_bdt": "665"})
+    assert accepted.status_code == 200
+    assert accepted.json()["status"] == "awaiting_purchase"
+    actor("owner", True)
+    received = browser.post(
+        f"/api/v1/admin/commerce/cod-orders/{ident}/purchase",
+        json={
+            "items": [{"sku": "ROHU", "quantity": "2"}],
+            "verified": True,
+            "note": "Received two fish after customer approval",
+        },
+    )
+    assert received.status_code == 200, received.text
     with factory() as db:
         o = db.get(GroceryOrder, ident)
+        assert o.status == "purchased"
         assert o.payment_status == "unpaid" and not o.checkout_data["quote_pending"]
-        assert db.get(Product, "ROHU").stock_qty == 3
+        assert db.get(Product, "ROHU").stock_qty == 0
 
 
 def test_assigned_courier_delivers_and_collects_exact_cash_atomically(cod):
@@ -256,3 +265,95 @@ def test_hosted_preview_keeps_online_payments_and_legacy_orders_closed(cod):
         ).status_code
         == 503
     )
+
+
+def test_procurement_is_owner_only_and_receipt_is_verified_atomic_idempotent(cod):
+    browser, factory, body, _ = cod
+    with factory() as db:
+        db.get(Product, "ROHU").stock_qty = 0
+        db.commit()
+    ident = place(browser, body).json()["id"]
+    availability = f"/api/v1/admin/commerce/cod-orders/{ident}/availability"
+    assert browser.get(availability).status_code == 403
+    assert transition(browser, ident, "awaiting_purchase").status_code == 403
+    actor("owner", True)
+    check = browser.get(availability).json()
+    assert check["items"][0]["required"] == "2.000"
+    assert Decimal(check["items"][0]["shortfall"]) == 2
+    assert check["can_confirm"] is False
+    assert transition(browser, ident, "confirmed").status_code == 409
+    assert transition(browser, ident, "awaiting_purchase").status_code == 200
+    assert transition(browser, ident, "preparing").status_code == 409
+    path = f"/api/v1/admin/commerce/cod-orders/{ident}/purchase"
+    payload = {
+        "items": [{"sku": "ROHU", "quantity": "1"}],
+        "verified": True,
+        "note": "Supplier receipt checked",
+    }
+    assert browser.post(path, json=payload).status_code == 409
+    with factory() as db:
+        assert db.get(Product, "ROHU").stock_qty == 0
+    payload["items"][0]["quantity"] = "3"
+    payload["verified"] = False
+    assert browser.post(path, json=payload).status_code == 422
+    payload["verified"] = True
+    assert browser.post(path, json=payload).status_code == 200
+    assert browser.post(path, json=payload).status_code == 200
+    with factory() as db:
+        assert db.get(Product, "ROHU").stock_qty == 1
+        assert db.get(GroceryOrder, ident).status == "purchased"
+        assert db.query(CommerceEvent).filter_by(entity_id=ident, event="purchased").count() == 1
+    assert browser.get(availability).json()["stock_reserved"] is True
+    assert transition(browser, ident, "preparing").status_code == 200
+    actor()
+    assert browser.post(f"/api/v1/commerce/cod-orders/{ident}/cancel").status_code == 409
+
+
+def test_verified_stock_count_rejects_stale_or_unverified_counts(cod):
+    browser, factory, _, _ = cod
+    path = "/api/v1/admin/commerce/catalog/ROHU/stock"
+    body = {
+        "available_qty": "7",
+        "expected_qty": "5",
+        "verified": True,
+        "note": "Counted actual fish",
+    }
+    assert browser.put(path, json=body).status_code == 403
+    actor("owner", True)
+    body["verified"] = False
+    assert browser.put(path, json=body).status_code == 422
+    body["verified"] = True
+    assert browser.put(path, json=body).status_code == 200
+    assert browser.put(path, json=body).status_code == 409
+    with factory() as db:
+        assert db.get(Product, "ROHU").stock_qty == 7
+
+
+def test_awaiting_purchase_cancellation_does_not_invent_stock(cod):
+    browser, factory, body, _ = cod
+    with factory() as db:
+        db.get(Product, "ROHU").stock_qty = 0
+        db.commit()
+    ident = place(browser, body).json()["id"]
+    actor("owner", True)
+    assert transition(browser, ident, "awaiting_purchase").status_code == 200
+    actor()
+    assert browser.post(f"/api/v1/commerce/cod-orders/{ident}/cancel").status_code == 200
+    with factory() as db:
+        assert db.get(Product, "ROHU").stock_qty == 0
+
+
+def test_customer_order_list_is_scoped_paginated_and_classifies_procurement(cod):
+    browser, _, body, _ = cod
+    ident = place(browser, body).json()["id"]
+    assert browser.get("/api/v1/account/orders").json()["total"] == 1
+    assert browser.get("/api/v1/account/orders?group=history").json()["total"] == 0
+    result = browser.get("/api/v1/account/orders?q=TRC-").json()["items"][0]
+    assert not {"request_hash", "idempotency_key", "customer_id"} & result.keys()
+    actor("another-customer")
+    assert browser.get("/api/v1/account/orders").json()["total"] == 0
+    actor("owner", True)
+    assert transition(browser, ident, "awaiting_purchase").status_code == 200
+    actor()
+    assert browser.get("/api/v1/account/orders").json()["items"][0]["status"] == "awaiting_purchase"
+    assert browser.get("/api/v1/account/orders?page=0").status_code == 422
