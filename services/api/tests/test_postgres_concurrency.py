@@ -95,3 +95,14 @@ def test_postgres_concurrent_idempotency_returns_one_order(pg_client):
     assert responses[0].json()["id"] == responses[1].json()["id"]
     with factory() as db:
         assert db.get(Product, "ROHU").stock_qty == 0
+
+
+def test_postgres_profile_defaults_survive_a_new_session(pg_client):
+    client, factory = pg_client
+    payload = {"name": "Saved customer", "phone": "01712345678", "checkout_defaults": {"area": "Uttara", "instructions": "Call first", "payment_method": "bkash"}}
+    assert client.put("/api/v1/account/profile", json=payload).status_code == 200
+    from app.modules.operations.models import CustomerProfile
+    with factory() as db:
+        saved = db.get(CustomerProfile, "qa-customer")
+        assert saved.checkout_defaults["instructions"] == "Call first"
+    assert client.get("/api/v1/account/profile").json()["checkout_defaults"]["payment_method"] == "bkash"

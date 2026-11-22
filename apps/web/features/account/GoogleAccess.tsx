@@ -45,9 +45,13 @@ export const useCredential = () => useContext(CredentialContext);
 
 export function GoogleAccess({
   admin = false,
+  compact = false,
+  bn = false,
   children,
 }: {
   admin?: boolean;
+  compact?: boolean;
+  bn?: boolean;
   children?: ReactNode;
 }) {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -93,8 +97,23 @@ export function GoogleAccess({
 
   return (
     <>
-      <section className="panel">
-        <h2>{admin ? "Administrator sign-in" : "Google account"}</h2>
+      <section
+        id={compact ? "checkout-sign-in" : undefined}
+        className={compact ? "panel checkout-session" : "panel"}
+      >
+        <h2>
+          {admin
+            ? "Administrator sign-in"
+            : compact
+              ? profile
+                ? bn
+                  ? "আপনার অ্যাকাউন্টে সাইন ইন করা আছে"
+                  : "Signed in to your account"
+                : bn
+                  ? "সংরক্ষিত তথ্যের জন্য সাইন ইন করুন"
+                  : "Sign in to use saved details"
+              : "Google account"}
+        </h2>
         {process.env.NEXT_PUBLIC_INTERNAL_QA === "true" && !profile && (
           <div>
             <p>Isolated internal QA — no live orders or payments</p>
@@ -163,7 +182,7 @@ export function GoogleAccess({
                 setCredential("");
               }}
             >
-              Sign out
+              {compact && bn ? "সাইন আউট" : "Sign out"}
             </button>
           </div>
         )}
