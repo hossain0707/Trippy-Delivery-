@@ -7,6 +7,7 @@ import { commerceApi, money, type Product } from "@/lib/commerce";
 import { productPhoto } from "@/lib/preparation.mjs";
 import { ProductImage } from "../commerce/ProductImage";
 import { API_BASE } from "@/lib/api";
+import { recordsForView, type AdminRecords } from "@/lib/admin-records.mjs";
 
 type Address = {
   name?: string;
@@ -115,8 +116,8 @@ const sections = [
   ["settings", "Settings", "সেটিংস", "⚙"],
   ["activity", "Activity", "কার্যক্রম", "◷"],
 ] as const;
-const title = (s = "") =>
-  s.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
+const title = (s: string | null | undefined = "") =>
+  (s || "").replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 function Badge({ value = "" }: { value?: string }) {
   return <span className={"aw-badge aw-" + value}>{title(value) || "—"}</span>;
 }
@@ -148,9 +149,11 @@ export function AdminWorkspace() {
   const [page, setPage] = useState(1);
   const [archive, setArchive] = useState(false);
   const [version, setVersion] = useState(0);
-  const [data, setData] = useState<RecordRow[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [total, setTotal] = useState(0);
+  const [records, setRecords] = useState<AdminRecords<
+    RecordRow,
+    Product
+  > | null>(null);
+  const { items: data, products, total } = recordsForView(records, view);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -214,9 +217,7 @@ export function AdminWorkspace() {
     let active = true;
     setLoading(true);
     setMessage("");
-    setData([]);
-    setProducts([]);
-    setTotal(0);
+    setRecords(null);
     if (view === "overview") setOverview(null);
     const run = async () => {
       if (view === "overview") {
@@ -243,9 +244,12 @@ export function AdminWorkspace() {
           token,
         );
         if (active) {
-          setData(result.items);
-          setProducts(result.items);
-          setTotal(result.total);
+          setRecords({
+            view,
+            items: view === "products" ? [] : result.items,
+            products: view === "products" ? result.items : [],
+            total: result.total,
+          });
         }
       }
     };
