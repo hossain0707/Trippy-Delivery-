@@ -30,3 +30,7 @@ The inline stock-count action requires the actual count, verification and note. 
 ## Validation
 
 Tests cover procurement authorization, insufficient/unverified receipts, atomic stock changes, repeat receipt submission, stale stock counts, cancellation, customer-scoped order history and polling cancellation/stale responses. PostgreSQL CI tests concurrent duplicate receipt submissions. No real purchases, stock edits or customer-order transitions are performed during release verification.
+
+## TRIPPY team grocery delivery
+
+Packed grocery orders can move directly to out for delivery through owner-only controls. Courier selection is not required. Existing assigned orders remain compatible. Parcel assignment stays separate. Completing a COD delivery still requires the exact cash amount and recipient acknowledgement; payment stays unpaid until then.

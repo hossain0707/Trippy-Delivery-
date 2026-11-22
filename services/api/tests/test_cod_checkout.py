@@ -357,3 +357,43 @@ def test_customer_order_list_is_scoped_paginated_and_classifies_procurement(cod)
     actor()
     assert browser.get("/api/v1/account/orders").json()["items"][0]["status"] == "awaiting_purchase"
     assert browser.get("/api/v1/account/orders?page=0").status_code == 422
+
+
+def test_trippy_team_delivers_without_courier_assignment(cod):
+    browser, factory, body, _ = cod
+    ident = place(browser, body).json()["id"]
+    actor()
+    assert transition(browser, ident, "out_for_delivery").status_code == 403
+    actor("owner", True)
+    assert transition(browser, ident, "out_for_delivery").status_code == 409
+    for state in ("confirmed", "preparing", "packed", "out_for_delivery"):
+        assert transition(browser, ident, state).status_code == 200
+    with factory() as db:
+        order = db.get(GroceryOrder, ident)
+        assert order.courier_id is None
+        assert order.payment_status == "unpaid"
+    assert (
+        transition(
+            browser,
+            ident,
+            "delivered",
+            cash_collected_bdt="669",
+            note="Recipient accepted all items",
+        ).status_code
+        == 422
+    )
+    assert (
+        transition(
+            browser,
+            ident,
+            "delivered",
+            cash_collected_bdt="670",
+            note="Recipient accepted all items",
+        ).status_code
+        == 200
+    )
+    with factory() as db:
+        order = db.get(GroceryOrder, ident)
+        assert order.status == "delivered"
+        assert order.payment_status == "paid"
+        assert order.courier_id is None

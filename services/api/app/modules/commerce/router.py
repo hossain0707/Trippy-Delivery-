@@ -338,7 +338,7 @@ def transition(order_id: str, payload: Transition, db: DB, actor: Owner):
         "quoted": {"rejected"},
         "confirmed": {"preparing", "rejected"},
         "preparing": {"packed", "failed"},
-        "packed": {"assigned", "failed"},
+        "packed": {"assigned", "out_for_delivery", "failed"},
         "assigned": {"out_for_delivery", "failed"},
         "out_for_delivery": {"delivered", "failed"},
     }

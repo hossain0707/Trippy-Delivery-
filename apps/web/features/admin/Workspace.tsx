@@ -354,7 +354,7 @@ export function AdminWorkspace() {
     purchased: ["preparing", "rejected"],
     confirmed: ["preparing", "rejected"],
     preparing: ["packed", "failed"],
-    packed: ["assigned", "failed"],
+    packed: ["out_for_delivery", "failed"],
     assigned: ["out_for_delivery", "failed"],
     out_for_delivery: ["delivered", "failed"],
     quoted: ["rejected"],
@@ -1217,34 +1217,7 @@ export function AdminWorkspace() {
                                     </div>
                                   )}
                                   {detail.status === "packed" && (
-                                    <label>
-                                      Assign verified courier
-                                      <select
-                                        value={courier}
-                                        onChange={(e) =>
-                                          setCourier(e.target.value)
-                                        }
-                                      >
-                                        <option value="">Choose courier</option>
-                                        {couriers
-                                          .filter(
-                                            (c) =>
-                                              c.status === "approved" &&
-                                              c.details.active &&
-                                              c.details.identity_verified &&
-                                              c.details.documents_verified,
-                                          )
-                                          .map((c, i) => (
-                                            <option key={c.id} value={c.id}>
-                                              Partner {i + 1} ·{" "}
-                                              {title(c.transport_mode)} ·{" "}
-                                              {c.details.service_cities?.join(
-                                                ", ",
-                                              )}
-                                            </option>
-                                          ))}
-                                      </select>
-                                    </label>
+                                    <p>TRIPPY’s own team delivers this order. No courier assignment is required.</p>
                                   )}
                                   {detail.status === "out_for_delivery" && (
                                     <label>
@@ -1275,7 +1248,6 @@ export function AdminWorkspace() {
                                           (s === "confirmed" &&
                                             !!detail.checkout_data
                                               ?.quote_pending) ||
-                                          (s === "assigned" && !courier) ||
                                           (s === "delivered" &&
                                             (!cash ||
                                               note.trim().length < 10)) ||
@@ -1299,7 +1271,9 @@ export function AdminWorkspace() {
                                       >
                                         {s === "delivered"
                                           ? "Complete delivery & record cash"
-                                          : title(s)}
+                                          : s === "out_for_delivery"
+                                            ? "Mark out for delivery"
+                                            : title(s)}
                                       </button>
                                     ))}
                                   </div>
