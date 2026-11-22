@@ -68,7 +68,7 @@ async def preview_write_guard(request: Request, call_next):
         allowed = allowed or (
             request.method == "POST" and (
                 (path.startswith("/api/v1/commerce/cod-orders/") and path.endswith(("/accept", "/cancel")))
-                or (path.startswith("/api/v1/admin/commerce/cod-orders/") and path.endswith("/quote"))
+                or (path.startswith("/api/v1/admin/commerce/cod-orders/") and path.endswith(("/quote", "/purchase")))
                 or (path.startswith("/api/v1/admin/commerce/orders/") and path.endswith("/transition"))
             )
         )

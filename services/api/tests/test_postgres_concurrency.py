@@ -99,32 +99,108 @@ def test_postgres_concurrent_idempotency_returns_one_order(pg_client):
 
 def test_postgres_profile_defaults_survive_a_new_session(pg_client):
     client, factory = pg_client
-    payload = {"name": "Saved customer", "phone": "01712345678", "checkout_defaults": {"area": "Uttara", "instructions": "Call first", "payment_method": "bkash"}}
+    payload = {
+        "name": "Saved customer",
+        "phone": "01712345678",
+        "checkout_defaults": {
+            "area": "Uttara",
+            "instructions": "Call first",
+            "payment_method": "bkash",
+        },
+    }
     assert client.put("/api/v1/account/profile", json=payload).status_code == 200
     from app.modules.operations.models import CustomerProfile
+
     with factory() as db:
         saved = db.get(CustomerProfile, "qa-customer")
         assert saved.checkout_defaults["instructions"] == "Call first"
-    assert client.get("/api/v1/account/profile").json()["checkout_defaults"]["payment_method"] == "bkash"
+    assert (
+        client.get("/api/v1/account/profile").json()["checkout_defaults"]["payment_method"]
+        == "bkash"
+    )
 
 
 def test_postgres_cod_confirmation_cannot_oversell(pg_client):
     client, factory = pg_client
     from app.modules.commerce.models import ServiceSetting
+
     with factory() as db:
         db.get(Product, "ROHU").details = {"department": "fish"}
         db.add(ServiceSetting(key="payments", value={"cod_enabled": True}))
-        db.add(ServiceSetting(key="pilot", value={"dhaka_delivery_fee_bdt": "30", "preparation_cut_fee_bdt":"20"}))
+        db.add(
+            ServiceSetting(
+                key="pilot", value={"dhaka_delivery_fee_bdt": "30", "preparation_cut_fee_bdt": "20"}
+            )
+        )
         db.commit()
     body = request_body()
     body["expected_total_bdt"] = "670"
-    orders = [client.post("/api/v1/commerce/cod-orders", json=body, headers={"Idempotency-Key":f"cod-pg-order-{i}"}) for i in range(2)]
+    orders = [
+        client.post(
+            "/api/v1/commerce/cod-orders",
+            json=body,
+            headers={"Idempotency-Key": f"cod-pg-order-{i}"},
+        )
+        for i in range(2)
+    ]
     assert all(r.status_code == 201 for r in orders), [r.text for r in orders]
     app.dependency_overrides[get_actor] = lambda: Actor("owner", frozenset({"admin"}))
+
     def confirm(response):
-        return client.post("/api/v1/admin/commerce/orders/" + response.json()["id"] + "/transition", json={"status":"confirmed"})
+        return client.post(
+            "/api/v1/admin/commerce/orders/" + response.json()["id"] + "/transition",
+            json={"status": "confirmed"},
+        )
+
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(confirm, orders))
-    assert sorted(r.status_code for r in results) == [200,409], [r.text for r in results]
+    assert sorted(r.status_code for r in results) == [200, 409], [r.text for r in results]
     with factory() as db:
-        assert db.get(Product,"ROHU").stock_qty == 0
+        assert db.get(Product, "ROHU").stock_qty == 0
+
+
+def test_postgres_duplicate_purchase_receipt_adds_stock_only_once(pg_client):
+    client, factory = pg_client
+    from app.modules.commerce.models import ServiceSetting, CommerceEvent
+
+    with factory() as db:
+        db.get(Product, "ROHU").details = {"department": "fish"}
+        db.add(ServiceSetting(key="payments", value={"cod_enabled": True}))
+        db.add(
+            ServiceSetting(
+                key="pilot", value={"dhaka_delivery_fee_bdt": "30", "preparation_cut_fee_bdt": "20"}
+            )
+        )
+        db.commit()
+    body = request_body()
+    body["expected_total_bdt"] = "670"
+    order = client.post(
+        "/api/v1/commerce/cod-orders",
+        json=body,
+        headers={"Idempotency-Key": "concurrent-purchase-01"},
+    )
+    assert order.status_code == 201, order.text
+    ident = order.json()["id"]
+    app.dependency_overrides[get_actor] = lambda: Actor("owner", frozenset({"admin"}))
+    assert (
+        client.post(
+            f"/api/v1/admin/commerce/orders/{ident}/transition",
+            json={"status": "awaiting_purchase"},
+        ).status_code
+        == 200
+    )
+    payload = {
+        "items": [{"sku": "ROHU", "quantity": "1"}],
+        "verified": True,
+        "note": "Verified supplier receipt",
+    }
+
+    def receive(_):
+        return client.post(f"/api/v1/admin/commerce/cod-orders/{ident}/purchase", json=payload)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(receive, [1, 2]))
+    assert [r.status_code for r in results] == [200, 200], [r.text for r in results]
+    with factory() as db:
+        assert db.get(Product, "ROHU").stock_qty == 1
+        assert db.query(CommerceEvent).filter_by(entity_id=ident, event="purchased").count() == 1

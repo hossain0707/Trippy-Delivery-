@@ -379,3 +379,18 @@ def save_courier(
 
 
 router.include_router(admin)
+
+
+@router.get("/account/orders")
+def customer_orders(db: Annotated[Session, Depends(get_db)], actor: Annotated[Actor, Depends(get_actor)],
+                    group: Literal["active","history","archive"]="active",q: str=Query("",max_length=100),page: int=Query(1,ge=1)):
+    query=select(GroceryOrder).where(GroceryOrder.customer_id==actor.subject)
+    terminal=["delivered","cancelled","rejected","failed","preview"]
+    if group=="archive": query=query.where(GroceryOrder.status=="preview")
+    elif group=="history": query=query.where(GroceryOrder.status.in_(terminal[:-1]))
+    else: query=query.where(GroceryOrder.status.notin_(terminal))
+    if q: query=query.where(GroceryOrder.order_number.ilike("%"+q+"%"))
+    total=db.scalar(select(func.count()).select_from(query.subquery()))
+    values=db.scalars(query.order_by(GroceryOrder.created_at.desc(),GroceryOrder.id).offset((page-1)*12).limit(12)).all()
+    keys=("id","order_number","status","payment_method","payment_status","amount_bdt","delivery_deadline","created_at")
+    return {"items":[{**{k:row(o)[k] for k in keys},"checkout_data":{k:o.checkout_data.get(k) for k in ("mode","quote_pending","item_snapshots")}} for o in values],"total":total,"page":page,"page_size":12}

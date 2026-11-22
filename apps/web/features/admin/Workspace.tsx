@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useCredential } from "../account/GoogleAccess";
 import { CommerceConsole } from "./CommerceConsole";
+import { AvailabilityControls } from "./AvailabilityControls";
+import { orderLabel } from "@/lib/order-status.mjs";
 import { commerceApi, money, type Product } from "@/lib/commerce";
 import { productPhoto } from "@/lib/preparation.mjs";
 import { ProductImage } from "../commerce/ProductImage";
@@ -85,6 +87,7 @@ type Detail = RecordRow & {
   orders?: RecordRow[];
 };
 type Overview = {
+  awaiting_purchase?: number;
   new_orders: number;
   preparing: number;
   out_for_delivery: number;
@@ -119,7 +122,9 @@ const sections = [
 const title = (s: string | null | undefined = "") =>
   (s || "").replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 function Badge({ value = "" }: { value?: string }) {
-  return <span className={"aw-badge aw-" + value}>{title(value) || "—"}</span>;
+  return (
+    <span className={"aw-badge aw-" + value}>{orderLabel(value) || "—"}</span>
+  );
 }
 function AddressCard({ address }: { address?: Address }) {
   return (
@@ -322,10 +327,20 @@ export function AdminWorkspace() {
     setBusy(true);
     setMessage("");
     try {
-      await commerceApi(path, token, "POST", payload);
+      const result = await commerceApi<{ status?: string }>(
+        path,
+        token,
+        "POST",
+        payload,
+      );
       if (detail) await open(detail);
       setVersion((v) => v + 1);
-      setMessage(t("Changes saved.", "পরিবর্তন সংরক্ষিত।"));
+      setMessage(
+        result.status
+          ? t("Order updated: ", "অর্ডার আপডেট: ") +
+              orderLabel(result.status, bn)
+          : t("Changes saved.", "পরিবর্তন সংরক্ষিত।"),
+      );
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
@@ -333,8 +348,10 @@ export function AdminWorkspace() {
     }
   }
   const orderActions: Record<string, string[]> = {
-    placed: ["confirmed", "rejected"],
-    pending_review: ["confirmed", "rejected"],
+    placed: ["rejected"],
+    pending_review: ["rejected"],
+    awaiting_purchase: ["rejected"],
+    purchased: ["preparing", "rejected"],
     confirmed: ["preparing", "rejected"],
     preparing: ["packed", "failed"],
     packed: ["assigned", "failed"],
@@ -499,7 +516,7 @@ export function AdminWorkspace() {
               <div className="aw-metrics">
                 {[
                   [t("New orders", "নতুন অর্ডার"), overview.new_orders, "orders"],
-                  [t("Preparing", "প্রস্তুত হচ্ছে"), overview.preparing, "orders"],
+                  [t("In progress", "চলমান"), overview.preparing, "orders"],
                   [
                     t("On delivery", "ডেলিভারিতে"),
                     overview.out_for_delivery,
@@ -587,6 +604,17 @@ export function AdminWorkspace() {
                     </button>
                     <button
                       className="aw-attention"
+                      onClick={() => navigate("orders")}
+                    >
+                      {overview.awaiting_purchase || 0}{" "}
+                      {t(
+                        "orders awaiting purchase",
+                        "টি অর্ডারের বাজার করা বাকি",
+                      )}{" "}
+                      →
+                    </button>
+                    <button
+                      className="aw-attention"
                       onClick={() => navigate("products")}
                     >
                       {overview.low_stock}{" "}
@@ -637,6 +665,8 @@ export function AdminWorkspace() {
                     {(view === "orders"
                       ? [
                           "placed",
+                          "awaiting_purchase",
+                          "purchased",
                           "quoted",
                           "confirmed",
                           "preparing",
@@ -1100,142 +1130,193 @@ export function AdminWorkspace() {
                               ),
                             )}
                         </section>
-                        {detail.checkout_data?.mode === "cod_order" && (
-                          <section className="aw-card">
-                            <h3>Order controls</h3>
-                            <fieldset disabled={busy}>
-                              <label>
-                                Review note / final quote breakdown
-                                <textarea
-                                  value={note}
-                                  minLength={3}
-                                  maxLength={1000}
-                                  onChange={(e) => setNote(e.target.value)}
-                                />
-                              </label>
-                              {["placed", "pending_review", "quoted"].includes(
-                                detail.status || "",
-                              ) && (
-                                <div className="aw-quote">
+                        {detail.checkout_data?.mode === "cod_order" &&
+                          ![
+                            "delivered",
+                            "cancelled",
+                            "rejected",
+                            "failed",
+                          ].includes(detail.status || "") && (
+                            <>
+                              <AvailabilityControls
+                                id={detail.id}
+                                status={detail.status || ""}
+                                bn={bn}
+                                busy={busy}
+                                onTransition={(status) =>
+                                  void action(
+                                    "/admin/commerce/orders/" +
+                                      detail.id +
+                                      "/transition",
+                                    {
+                                      status,
+                                      note:
+                                        status === "awaiting_purchase"
+                                          ? "Owner accepted order for verified purchase"
+                                          : "Owner confirmed available inventory",
+                                    },
+                                  )
+                                }
+                                onPurchased={() => {
+                                  void open(detail);
+                                  setVersion((v) => v + 1);
+                                  setMessage(
+                                    t(
+                                      "Purchase recorded. Ready for preparation.",
+                                      "ক্রয় সংরক্ষিত। প্রস্তুতির জন্য তৈরি।",
+                                    ),
+                                  );
+                                }}
+                              />
+                              <section className="aw-card">
+                                <h3>Order controls</h3>
+                                <fieldset disabled={busy}>
                                   <label>
-                                    Final total (BDT)
-                                    <input
-                                      type="number"
-                                      min="0.01"
-                                      step="0.01"
-                                      value={quote}
-                                      onChange={(e) => setQuote(e.target.value)}
+                                    Review note / final quote breakdown
+                                    <textarea
+                                      value={note}
+                                      minLength={3}
+                                      maxLength={1000}
+                                      onChange={(e) => setNote(e.target.value)}
                                     />
                                   </label>
-                                  <button
-                                    className="secondary"
-                                    disabled={!quote || note.trim().length < 10}
-                                    onClick={() =>
-                                      void action(
-                                        "/admin/commerce/cod-orders/" +
-                                          detail.id +
-                                          "/quote",
-                                        { final_total_bdt: quote, note },
-                                      )
-                                    }
-                                  >
-                                    Send final quote for customer approval
-                                  </button>
-                                </div>
-                              )}
-                              {detail.status === "packed" && (
-                                <label>
-                                  Assign verified courier
-                                  <select
-                                    value={courier}
-                                    onChange={(e) => setCourier(e.target.value)}
-                                  >
-                                    <option value="">Choose courier</option>
-                                    {couriers
-                                      .filter(
-                                        (c) =>
-                                          c.status === "approved" &&
-                                          c.details.active &&
-                                          c.details.identity_verified &&
-                                          c.details.documents_verified,
-                                      )
-                                      .map((c, i) => (
-                                        <option key={c.id} value={c.id}>
-                                          Partner {i + 1} ·{" "}
-                                          {title(c.transport_mode)} ·{" "}
-                                          {c.details.service_cities?.join(", ")}
-                                        </option>
-                                      ))}
-                                  </select>
-                                </label>
-                              )}
-                              {detail.status === "out_for_delivery" && (
-                                <label>
-                                  Exact cash collected (BDT)
-                                  <input
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    value={cash}
-                                    onChange={(e) => setCash(e.target.value)}
-                                  />
-                                </label>
-                              )}
-                              <div className="aw-actions">
-                                {(orderActions[detail.status || ""] || []).map(
-                                  (s) => (
-                                    <button
-                                      className={
-                                        s === "rejected" || s === "failed"
-                                          ? "secondary"
-                                          : "primary"
-                                      }
-                                      key={s}
-                                      disabled={
-                                        (s === "confirmed" &&
-                                          !!detail.checkout_data
-                                            ?.quote_pending) ||
-                                        (s === "assigned" && !courier) ||
-                                        (s === "delivered" &&
-                                          (!cash || note.trim().length < 10)) ||
-                                        (["failed", "rejected"].includes(s) &&
-                                          !note.trim())
-                                      }
-                                      onClick={() =>
-                                        void action(
-                                          "/admin/commerce/orders/" +
-                                            detail.id +
-                                            "/transition",
-                                          {
-                                            status: s,
-                                            courier_id: courier || null,
-                                            note,
-                                            cash_collected_bdt:
-                                              s === "delivered" ? cash : null,
-                                          },
-                                        )
-                                      }
-                                    >
-                                      {s === "delivered"
-                                        ? "Complete delivery & record cash"
-                                        : title(s)}
-                                    </button>
-                                  ),
+                                  {[
+                                    "placed",
+                                    "pending_review",
+                                    "quoted",
+                                  ].includes(detail.status || "") && (
+                                    <div className="aw-quote">
+                                      <label>
+                                        Final total (BDT)
+                                        <input
+                                          type="number"
+                                          min="0.01"
+                                          step="0.01"
+                                          value={quote}
+                                          onChange={(e) =>
+                                            setQuote(e.target.value)
+                                          }
+                                        />
+                                      </label>
+                                      <button
+                                        className="secondary"
+                                        disabled={
+                                          !quote || note.trim().length < 10
+                                        }
+                                        onClick={() =>
+                                          void action(
+                                            "/admin/commerce/cod-orders/" +
+                                              detail.id +
+                                              "/quote",
+                                            { final_total_bdt: quote, note },
+                                          )
+                                        }
+                                      >
+                                        Send final quote for customer approval
+                                      </button>
+                                    </div>
+                                  )}
+                                  {detail.status === "packed" && (
+                                    <label>
+                                      Assign verified courier
+                                      <select
+                                        value={courier}
+                                        onChange={(e) =>
+                                          setCourier(e.target.value)
+                                        }
+                                      >
+                                        <option value="">Choose courier</option>
+                                        {couriers
+                                          .filter(
+                                            (c) =>
+                                              c.status === "approved" &&
+                                              c.details.active &&
+                                              c.details.identity_verified &&
+                                              c.details.documents_verified,
+                                          )
+                                          .map((c, i) => (
+                                            <option key={c.id} value={c.id}>
+                                              Partner {i + 1} ·{" "}
+                                              {title(c.transport_mode)} ·{" "}
+                                              {c.details.service_cities?.join(
+                                                ", ",
+                                              )}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    </label>
+                                  )}
+                                  {detail.status === "out_for_delivery" && (
+                                    <label>
+                                      Exact cash collected (BDT)
+                                      <input
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        value={cash}
+                                        onChange={(e) =>
+                                          setCash(e.target.value)
+                                        }
+                                      />
+                                    </label>
+                                  )}
+                                  <div className="aw-actions">
+                                    {(
+                                      orderActions[detail.status || ""] || []
+                                    ).map((s) => (
+                                      <button
+                                        className={
+                                          s === "rejected" || s === "failed"
+                                            ? "secondary"
+                                            : "primary"
+                                        }
+                                        key={s}
+                                        disabled={
+                                          (s === "confirmed" &&
+                                            !!detail.checkout_data
+                                              ?.quote_pending) ||
+                                          (s === "assigned" && !courier) ||
+                                          (s === "delivered" &&
+                                            (!cash ||
+                                              note.trim().length < 10)) ||
+                                          (["failed", "rejected"].includes(s) &&
+                                            !note.trim())
+                                        }
+                                        onClick={() =>
+                                          void action(
+                                            "/admin/commerce/orders/" +
+                                              detail.id +
+                                              "/transition",
+                                            {
+                                              status: s,
+                                              courier_id: courier || null,
+                                              note,
+                                              cash_collected_bdt:
+                                                s === "delivered" ? cash : null,
+                                            },
+                                          )
+                                        }
+                                      >
+                                        {s === "delivered"
+                                          ? "Complete delivery & record cash"
+                                          : title(s)}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </fieldset>
+                                {detail.checkout_data.quote_pending && (
+                                  <p className="aw-warning">
+                                    Customer approval of the final quote is
+                                    required before preparation.
+                                  </p>
                                 )}
-                              </div>
-                            </fieldset>
-                            {detail.checkout_data.quote_pending && (
-                              <p className="aw-warning">
-                                Customer approval of the final quote is required
-                                before preparation.
-                              </p>
-                            )}
-                            <p>
-                              Confirmation reserves verified stock. Cash is
-                              recorded only with completed delivery.
-                            </p>
-                          </section>
-                        )}
+                                <p>
+                                  Confirmation reserves verified stock. Cash is
+                                  recorded only with completed delivery.
+                                </p>
+                              </section>
+                            </>
+                          )}
                         {detail.status === "preview" && (
                           <p>
                             Archived preview only. No payment or delivery was
