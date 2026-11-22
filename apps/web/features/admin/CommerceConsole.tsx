@@ -225,9 +225,9 @@ export function CommerceConsole() {
       <p className="kicker">OWNER WORKSPACE</p>
       <h2>Catalog, payments & delivery controls</h2>
       <p>
-        COD orders can be reviewed and fulfilled here. Online ordering requires inventory, payment receiving
-        details, coverage and pilot approval are complete. Saving these settings
-        does not activate the pilot.
+        COD orders can be reviewed and fulfilled here. Online ordering requires
+        inventory, payment receiving details, coverage and pilot approval are
+        complete. Saving these settings does not activate the pilot.
       </p>
       <nav className="department-pills" aria-label="Commerce administration">
         {[
@@ -1201,7 +1201,10 @@ export function CommerceConsole() {
                           status: s,
                           courier_id: assigned[o.id] || null,
                           note: notes[o.id] || "",
-                          cash_collected_bdt: receipt[o.id] || null,
+                          cash_collected_bdt:
+                            o.checkout_data?.mode === "cod_order"
+                              ? receipt[o.id] || null
+                              : null,
                         },
                         "POST",
                       )
