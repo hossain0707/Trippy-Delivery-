@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ProductImage } from "./ProductImage";
 import { API_BASE } from "@/lib/api";
 import { productPhoto, preparationOptions } from "@/lib/preparation.mjs";
@@ -743,6 +743,10 @@ function CheckoutForm({
 
 export function BasketCheckout() {
   const [bn, setBn] = useState(false);
+  const languageEdited = useRef(false);
+  const loadProfileLanguage = useCallback((value: boolean) => {
+    if (!languageEdited.current) setBn(value);
+  }, []);
   const [lines, setLines] = useState<BasketLine[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState("");
@@ -818,7 +822,14 @@ export function BasketCheckout() {
         </Link>
         <Link href="/groceries">{t("Continue shopping", "বাজার করুন")}</Link>
         <Link href="/account">{t("My profile", "আমার প্রোফাইল")}</Link>
-        <button onClick={() => setBn(!bn)}>{bn ? "English" : "বাংলা"}</button>
+        <button
+          onClick={() => {
+            languageEdited.current = true;
+            setBn(!bn);
+          }}
+        >
+          {bn ? "English" : "বাংলা"}
+        </button>
       </nav>
       <p className="launch-notice checkout-preview-banner">
         {t(
@@ -1102,7 +1113,7 @@ export function BasketCheckout() {
             clear={() => writeBasket([])}
             onStep={go}
             onBusy={setBusy}
-            onLanguage={setBn}
+            onLanguage={loadProfileLanguage}
             subtotal={subtotal}
             itemSubtotal={itemSubtotal}
             pendingItems={pendingItems}
