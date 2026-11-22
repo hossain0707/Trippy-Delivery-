@@ -24,3 +24,14 @@ test('bridge uses fixed upstream, forwards only session cookie and prevents resp
  assert.equal(result.headers.get('Access-Control-Allow-Origin'),null);
  assert.match(result.headers.get('Set-Cookie'),/HttpOnly/);
 });
+test('uses Workers-supported manual redirects and never forwards credentials to redirects',async()=>{
+ const response=await proxyAuth(new Request(base+'session',{method:'POST',body:'{}'}),async(url,init)=>{
+  assert.equal(init.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://evil.example'}});
+ });
+ assert.equal(response.status,502);assert.equal(response.headers.get('Location'),null);
+});
+test('upstream failure returns a safe retry response instead of a Worker exception',async()=>{
+ const response=await proxyAuth(new Request(base+'configuration'),async()=>{throw Error('internal network error');});
+ assert.equal(response.status,502);assert.equal(response.headers.get('Cache-Control'),'no-store');
+ assert.doesNotMatch(await response.text(),/internal network error/);
+});
